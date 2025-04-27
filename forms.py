@@ -32,8 +32,9 @@ class UploadDatasetForm(FlaskForm):
         FileAllowed(['csv'], 'CSV files only!')
     ])
     description = TextAreaField('Description')
-    time_column = StringField('Time Column Name', validators=[DataRequired()])
-    value_column = StringField('Energy Value Column Name', validators=[DataRequired()])
+    time_column = StringField('Time Column Name (optional, will be auto-detected if empty)')
+    value_column = StringField('Value Column Name (optional, all numeric columns will be analyzed if empty)')
+    auto_detect = SubmitField('Auto-Detect Columns')
     submit = SubmitField('Upload')
 
 class DetectionForm(FlaskForm):

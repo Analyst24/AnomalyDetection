@@ -177,23 +177,103 @@ def init_routes(app):
     @login_required
     def upload():
         form = UploadDatasetForm()
+        preview_data = None
+        detected_columns = None
         
-        if form.validate_on_submit():
+        # Handle auto-detect columns button
+        if request.method == 'POST' and 'auto_detect' in request.form:
             try:
-                # Save the uploaded file
                 file = form.file.data
-                filename = secure_filename(file.filename)
+                if file:
+                    # Save the file temporarily
+                    filename = secure_filename(file.filename)
+                    temp_dir = os.path.join(app.root_path, 'uploads', 'temp')
+                    os.makedirs(temp_dir, exist_ok=True)
+                    temp_path = os.path.join(temp_dir, filename)
+                    file.save(temp_path)
+                    
+                    # Read the CSV and auto-detect columns
+                    df = pd.read_csv(temp_path)
+                    
+                    # Display a preview of the data
+                    preview_data = df.head(5).to_html(classes='table table-striped table-sm')
+                    
+                    # Detect time column
+                    time_column = None
+                    for col in df.columns:
+                        if any(time_pattern in col.lower() for time_pattern in ['time', 'date', 'timestamp']):
+                            time_column = col
+                            break
+                    
+                    # Detect numeric columns (excluding time-related columns)
+                    exclude_patterns = ['date', 'time', 'timestamp', 'id', 'index']
+                    numeric_cols = [col for col in df.select_dtypes(include=['number']).columns 
+                                  if not any(pattern in col.lower() for pattern in exclude_patterns)]
+                    
+                    detected_columns = {
+                        'time_column': time_column,
+                        'numeric_columns': numeric_cols
+                    }
+                    
+                    # Update form with detected values
+                    if time_column:
+                        form.time_column.data = time_column
+                    
+                    # For value column, suggest the first numeric column that's not time-related
+                    if numeric_cols:
+                        form.value_column.data = numeric_cols[0]
+                        
+                    # Keep the file in session for the next submission
+                    if not os.path.exists(os.path.join(temp_dir, 'session')):
+                        os.makedirs(os.path.join(temp_dir, 'session'), exist_ok=True)
+                    session_file_path = os.path.join(temp_dir, 'session', f'{current_user.id}_{filename}')
+                    os.replace(temp_path, session_file_path)
+                    session['temp_file_path'] = session_file_path
+                    session['original_filename'] = filename
+                    
+                    flash(f'Columns auto-detected from "{filename}". Please review and confirm.', 'info')
+                else:
+                    flash('Please select a file first', 'warning')
+            except Exception as e:
+                logger.error(f"Error in auto-detection: {str(e)}")
+                flash(f'Error detecting columns: {str(e)}', 'danger')
+        
+        # Handle form submission for upload
+        elif form.validate_on_submit():
+            try:
+                # Get the file - either from the form or from session if auto-detected
+                if 'temp_file_path' in session and os.path.exists(session['temp_file_path']):
+                    # Use the file from auto-detection
+                    file_path = session['temp_file_path']
+                    filename = session['original_filename']
+                else:
+                    # Save the newly uploaded file
+                    file = form.file.data
+                    filename = secure_filename(file.filename)
+                    
+                    # Create uploads directory if it doesn't exist
+                    upload_dir = os.path.join(app.root_path, 'uploads', str(current_user.id))
+                    os.makedirs(upload_dir, exist_ok=True)
+                    
+                    file_path = os.path.join(upload_dir, filename)
+                    file.save(file_path)
                 
-                # Create uploads directory if it doesn't exist
-                upload_dir = os.path.join(app.root_path, 'uploads', str(current_user.id))
-                os.makedirs(upload_dir, exist_ok=True)
-                
-                file_path = os.path.join(upload_dir, filename)
-                file.save(file_path)
-                
-                # Read the file to get row count
+                # Read the file to get row count and verify columns
                 df = pd.read_csv(file_path)
                 row_count = len(df)
+                
+                # Use provided column names or leave empty for auto-detection later
+                time_column = form.time_column.data or None
+                value_column = form.value_column.data or None
+                
+                # If columns were specified, verify they exist
+                if time_column and time_column not in df.columns:
+                    flash(f'Warning: Time column "{time_column}" not found in the dataset. It will be auto-detected during analysis.', 'warning')
+                    time_column = None
+                    
+                if value_column and value_column not in df.columns:
+                    flash(f'Warning: Value column "{value_column}" not found in the dataset. All numeric columns will be used during analysis.', 'warning')
+                    value_column = None
                 
                 # Create dataset record
                 dataset = Dataset(
@@ -201,13 +281,19 @@ def init_routes(app):
                     description=form.description.data,
                     file_path=file_path,
                     row_count=row_count,
-                    time_column=form.time_column.data,
-                    value_column=form.value_column.data,
+                    time_column=time_column,
+                    value_column=value_column,
                     user_id=current_user.id
                 )
                 
                 db.session.add(dataset)
                 db.session.commit()
+                
+                # Clear session data
+                if 'temp_file_path' in session:
+                    del session['temp_file_path']
+                if 'original_filename' in session:
+                    del session['original_filename']
                 
                 flash(f'Dataset "{filename}" uploaded successfully!', 'success')
                 return redirect(url_for('upload'))
@@ -219,7 +305,8 @@ def init_routes(app):
         # Get existing datasets
         datasets = Dataset.query.filter_by(user_id=current_user.id).all()
         
-        return render_template('upload.html', form=form, datasets=datasets)
+        return render_template('upload.html', form=form, datasets=datasets, 
+                              preview_data=preview_data, detected_columns=detected_columns)
 
     # Run Detection page
     @app.route('/detection', methods=['GET', 'POST'])
@@ -239,9 +326,11 @@ def init_routes(app):
                 # Get the dataset
                 dataset = Dataset.query.get_or_404(dataset_id)
                 
-                # Process the data
+                # Read the data from CSV
                 df = pd.read_csv(dataset.file_path)
-                processed_df = preprocess_data(df, dataset.time_column, dataset.value_column)
+                
+                # Minimal processing - let the algorithm handle most preprocessing
+                # This allows using all numeric columns for multi-column anomaly detection
                 
                 # Run the selected algorithm
                 if algorithm == 'isolation_forest':
@@ -251,15 +340,17 @@ def init_routes(app):
                 elif algorithm == 'kmeans':
                     model = KMeansModel()
                 
-                # Train and get results
+                logger.info(f"Running {algorithm} on dataset {dataset.filename} (ID: {dataset.id})")
+                
+                # Get time and value columns (if specified in the dataset)
                 time_col = dataset.time_column
                 value_col = dataset.value_column
-                if time_col in processed_df.columns and value_col in processed_df.columns:
-                    anomalies, metrics = model.detect_anomalies(processed_df, time_column=time_col, value_column=value_col)
-                else:
-                    anomalies, metrics = model.detect_anomalies(processed_df)
                 
-                # Save results
+                # Use advanced anomaly detection with auto-detection capabilities
+                logger.info(f"Using time_column: {time_col}, value_column: {value_col}")
+                anomalies, metrics = model.detect_anomalies(df, time_column=time_col, value_column=value_col)
+                
+                # Save complete result (including all detected anomalies for each feature)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 result_filename = f"{algorithm}_{timestamp}.csv"
                 result_dir = os.path.join(app.root_path, 'results', str(current_user.id))
@@ -268,10 +359,17 @@ def init_routes(app):
                 result_path = os.path.join(result_dir, result_filename)
                 anomalies.to_csv(result_path, index=False)
                 
-                # Create result record
+                # Log feature importance if available
+                if 'feature_importance' in metrics:
+                    feature_importance = metrics['feature_importance']
+                    sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+                    logger.info(f"Feature importance: {sorted_features}")
+                
+                # Create result record with enhanced metrics
+                anomaly_count = int(anomalies['is_anomaly'].sum())
                 result = AnomalyResult(
                     algorithm=algorithm,
-                    anomaly_count=len(anomalies[anomalies['is_anomaly'] == 1]),
+                    anomaly_count=anomaly_count,
                     result_path=result_path,
                     metrics=metrics,
                     user_id=current_user.id,
@@ -281,7 +379,15 @@ def init_routes(app):
                 db.session.add(result)
                 db.session.commit()
                 
-                flash(f'Anomaly detection completed successfully using {algorithm}!', 'success')
+                # Provide more detailed success message
+                importance_msg = ""
+                if 'feature_importance' in metrics and metrics['feature_importance']:
+                    # Get the most important feature
+                    top_feature = sorted_features[0][0] if sorted_features else None
+                    if top_feature:
+                        importance_msg = f" The most significant anomaly contributor was {top_feature}."
+                
+                flash(f'Anomaly detection completed successfully using {algorithm}! Found {anomaly_count} anomalies in {len(df)} records.{importance_msg}', 'success')
                 return redirect(url_for('results', result_id=result.id))
                 
             except Exception as e:
@@ -321,19 +427,70 @@ def init_routes(app):
         # Load the result data
         df = pd.read_csv(result.result_path)
         
-        # Prepare data for visualizations
-        time_series_data = {
-            'timestamps': df[result.dataset.time_column].tolist(),
-            'values': df[result.dataset.value_column].tolist(),
-            'anomalies': df['is_anomaly'].tolist()
-        }
+        # Prepare data for visualizations - handle both single and multi-column cases
+        time_series_data = {}
+        dataset = result.dataset
         
-        # Additional metrics
-        metrics = result.metrics
+        # Auto-detect time column if not specified
+        time_column = dataset.time_column
+        if not time_column:
+            # Find a time-related column
+            for col in df.columns:
+                if any(time_pattern in col.lower() for time_pattern in ['time', 'date', 'timestamp']):
+                    time_column = col
+                    break
+            # If still not found, use the index
+            if not time_column and 'index' in df.columns:
+                time_column = 'index'
         
+        # If we have a time column, use it for timestamps
+        if time_column and time_column in df.columns:
+            time_series_data['timestamps'] = df[time_column].tolist()
+        else:
+            # Generate sequential timestamps
+            time_series_data['timestamps'] = list(range(len(df)))
+        
+        # Get main anomaly data
+        time_series_data['anomalies'] = df['is_anomaly'].tolist()
+        
+        # Add value column data if specified
+        value_column = dataset.value_column
+        if value_column and value_column in df.columns:
+            time_series_data['values'] = df[value_column].tolist()
+            
+            # Add column-specific anomaly data if available
+            column_key = f'{value_column}_anomaly'
+            if column_key in df.columns:
+                time_series_data[f'{value_column}_anomalies'] = df[column_key].tolist()
+        
+        # For multi-column case, detect all feature-specific anomaly columns
+        feature_columns = {}
+        for col in df.columns:
+            if col.endswith('_anomaly'):
+                base_col = col.replace('_anomaly', '')
+                if base_col in df.columns:
+                    # Only include if the base column also exists
+                    feature_columns[base_col] = {
+                        'values': df[base_col].tolist(),
+                        'anomalies': df[col].tolist()
+                    }
+        
+        # Get feature importance from metrics if available
+        feature_importance = {}
+        if 'feature_importance' in result.metrics:
+            feature_importance = result.metrics['feature_importance']
+        
+        # Add anomaly details if available
+        anomaly_details = {}
+        if 'anomaly_details' in result.metrics:
+            anomaly_details = result.metrics['anomaly_details']
+            
         return jsonify({
             'time_series': time_series_data,
-            'metrics': metrics,
+            'feature_columns': feature_columns,
+            'feature_importance': feature_importance, 
+            'anomaly_details': anomaly_details,
+            'metrics': result.metrics,
             'anomaly_count': result.anomaly_count,
             'algorithm': result.algorithm
         })

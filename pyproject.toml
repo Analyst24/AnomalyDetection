@@ -16,4 +16,5 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "numpy>=2.2.5",
     "python-dotenv>=1.1.0",
+    "trafilatura>=2.0.0",
 ]

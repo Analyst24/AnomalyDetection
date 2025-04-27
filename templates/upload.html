@@ -35,6 +35,56 @@
                             <small class="form-text text-muted">Upload a CSV file with your energy consumption data.</small>
                         </div>
                         
+                        <!-- Auto-detect button -->
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-outline-primary" name="auto_detect">
+                                <i class="fas fa-magic me-1"></i> Auto-Detect Columns
+                            </button>
+                            <small class="form-text text-muted ms-2">Click to analyze the file and automatically detect column types.</small>
+                        </div>
+                        
+                        <!-- Data preview section (only shown after auto-detect) -->
+                        {% if preview_data %}
+                        <div class="mb-3">
+                            <div class="card border-success">
+                                <div class="card-header bg-success bg-opacity-10">
+                                    <h6 class="mb-0 text-success"><i class="fas fa-table me-2"></i> Data Preview</h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        {{ preview_data|safe }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Detected columns info -->
+                        {% if detected_columns %}
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i> Detected Columns</h6>
+                                <hr>
+                                {% if detected_columns.time_column %}
+                                <p class="mb-1"><strong>Time Column:</strong> <code>{{ detected_columns.time_column }}</code></p>
+                                {% else %}
+                                <p class="mb-1"><strong>Time Column:</strong> <span class="text-muted">None detected</span></p>
+                                {% endif %}
+                                
+                                {% if detected_columns.numeric_columns %}
+                                <p class="mb-1"><strong>Numeric Columns:</strong></p>
+                                <ul class="mb-0">
+                                    {% for col in detected_columns.numeric_columns %}
+                                    <li><code>{{ col }}</code></li>
+                                    {% endfor %}
+                                </ul>
+                                {% else %}
+                                <p class="mb-1"><strong>Numeric Columns:</strong> <span class="text-muted">None detected</span></p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                        
                         <div class="mb-3">
                             <label for="description" class="form-label">{{ form.description.label }}</label>
                             {{ form.description(class="form-control", rows=3, placeholder="Enter a description for this dataset") }}
@@ -45,27 +95,20 @@
                             <div class="col-md-6 mb-3">
                                 <label for="time_column" class="form-label">{{ form.time_column.label }}</label>
                                 {{ form.time_column(class="form-control", placeholder="e.g., timestamp") }}
-                                {% if form.time_column.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.time_column.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                                <small class="form-text text-muted">Column name containing timestamps.</small>
+                                <small class="form-text text-muted">Leave empty to auto-detect timestamp column.</small>
                             </div>
                             
                             <div class="col-md-6 mb-3">
                                 <label for="value_column" class="form-label">{{ form.value_column.label }}</label>
                                 {{ form.value_column(class="form-control", placeholder="e.g., energy_consumption") }}
-                                {% if form.value_column.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.value_column.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                                <small class="form-text text-muted">Column name containing energy values.</small>
+                                <small class="form-text text-muted">Leave empty to use all numeric columns.</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="alert alert-primary">
+                                <i class="fas fa-lightbulb me-2"></i> <strong>New Feature:</strong> 
+                                You can now leave the columns empty for automatic detection, or specify just the ones you want to analyze.
                             </div>
                         </div>
                         
@@ -73,7 +116,7 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="agreement" required>
                                 <label class="form-check-label" for="agreement">
-                                    I confirm this data is properly formatted and contains valid energy consumption values.
+                                    I confirm this data is properly formatted and contains valid values for analysis.
                                 </label>
                             </div>
                         </div>
