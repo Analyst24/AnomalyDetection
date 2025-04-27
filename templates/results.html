@@ -324,6 +324,341 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+    
+    {% if selected_id %}
+    // Fetch result data for visualization
+    fetch(`/api/result/{{ selected_id }}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Result data:', data);
+            initializeCharts(data);
+        })
+        .catch(error => {
+            console.error('Error initializing dashboard charts:', error);
+        });
+        
+    function initializeCharts(data) {
+        // Create main anomaly time series chart
+        createTimeSeriesChart(data);
+        
+        // Create feature importance chart if available
+        if (data.feature_importance && Object.keys(data.feature_importance).length > 0) {
+            createFeatureImportanceChart(data.feature_importance);
+        }
+        
+        // Create anomaly distribution chart
+        createAnomalyDistributionChart(data);
+        
+        // If multiple feature columns are available, create multi-feature chart
+        if (data.feature_columns && Object.keys(data.feature_columns).length > 0) {
+            createMultiFeatureChart(data.feature_columns, data.time_series);
+        }
+    }
+    
+    function createTimeSeriesChart(data) {
+        const ctx = document.getElementById('time-series-chart');
+        if (!ctx) return;
+        
+        const timeSeries = data.time_series;
+        const timestamps = timeSeries.timestamps;
+        
+        // Prepare datasets
+        const datasets = [];
+        
+        // Main dataset
+        if (timeSeries.values) {
+            datasets.push({
+                label: 'Energy Consumption',
+                data: timeSeries.values,
+                borderColor: '#1abc9c',
+                backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0
+            });
+            
+            // Anomaly points dataset 
+            const anomalyIndices = [];
+            const anomalyValues = [];
+            
+            timeSeries.anomalies.forEach((val, idx) => {
+                if (val === 1) {
+                    anomalyIndices.push(idx);
+                    anomalyValues.push(timeSeries.values[idx]);
+                }
+            });
+            
+            // Add anomaly points
+            datasets.push({
+                label: 'Anomalies',
+                data: anomalyIndices.map(idx => ({
+                    x: timestamps[idx],
+                    y: timeSeries.values[idx]
+                })),
+                backgroundColor: 'rgba(231, 76, 60, 0.8)',
+                borderColor: 'rgba(231, 76, 60, 1)',
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                showLine: false
+            });
+        }
+        
+        // Create chart
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timestamps,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'nearest',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            color: '#f8f9fa'
+                        }
+                    },
+                    title: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'nearest',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.raw.y !== undefined ? context.raw.y : context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'category',
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#f8f9fa',
+                            maxRotation: 45,
+                            minRotation: 45,
+                            callback: function(value, index, values) {
+                                // Show fewer x-axis labels for better readability
+                                if (values.length > 20) {
+                                    return index % Math.ceil(values.length / 20) === 0 ? value : '';
+                                }
+                                return value;
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#f8f9fa'
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000
+                }
+            }
+        });
+    }
+    
+    function createFeatureImportanceChart(featureImportance) {
+        const ctx = document.getElementById('metrics-chart');
+        if (!ctx) return;
+        
+        // Sort features by importance
+        const features = Object.keys(featureImportance);
+        const importanceValues = features.map(feature => featureImportance[feature]);
+        
+        // Sort by importance (descending)
+        const indices = importanceValues.map((_, i) => i);
+        indices.sort((a, b) => importanceValues[b] - importanceValues[a]);
+        
+        const sortedFeatures = indices.map(i => features[i]);
+        const sortedValues = indices.map(i => importanceValues[i]);
+        
+        // Take top 5 features or all if fewer
+        const topN = Math.min(5, sortedFeatures.length);
+        const topFeatures = sortedFeatures.slice(0, topN);
+        const topValues = sortedValues.slice(0, topN);
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: topFeatures,
+                datasets: [{
+                    label: 'Feature Importance',
+                    data: topValues,
+                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Feature Importance',
+                        color: '#f8f9fa'
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)'
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#f8f9fa'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#f8f9fa'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function createAnomalyDistributionChart(data) {
+        const ctx = document.getElementById('anomaly-summary-chart');
+        if (!ctx) return;
+        
+        const anomalyCount = data.anomaly_count;
+        const totalPoints = data.metrics.total_points || data.time_series.anomalies.length;
+        const normalCount = totalPoints - anomalyCount;
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Normal', 'Anomalies'],
+                datasets: [{
+                    data: [normalCount, anomalyCount],
+                    backgroundColor: [
+                        'rgba(46, 204, 113, 0.7)',
+                        'rgba(231, 76, 60, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(46, 204, 113, 1)',
+                        'rgba(231, 76, 60, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#f8f9fa'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw;
+                                const percentage = ((value / totalPoints) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+    
+    function createMultiFeatureChart(featureColumns, timeSeries) {
+        const ctx = document.getElementById('anomalies-distribution-chart');
+        if (!ctx) return;
+        
+        // Prepare data for multi-feature chart
+        const labels = Object.keys(featureColumns);
+        const featureAnomalyCounts = labels.map(feature => 
+            featureColumns[feature].anomalies.reduce((sum, val) => sum + val, 0)
+        );
+        
+        new Chart(ctx, {
+            type: 'polarArea',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Anomalies by Feature',
+                    data: featureAnomalyCounts,
+                    backgroundColor: [
+                        'rgba(155, 89, 182, 0.7)',
+                        'rgba(52, 152, 219, 0.7)',
+                        'rgba(46, 204, 113, 0.7)',
+                        'rgba(241, 196, 15, 0.7)',
+                        'rgba(230, 126, 34, 0.7)',
+                        'rgba(231, 76, 60, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#f8f9fa'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)'
+                    }
+                },
+                scales: {
+                    r: {
+                        ticks: {
+                            color: '#f8f9fa'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
 });
 </script>
 {% endblock %}
