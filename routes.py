@@ -36,10 +36,14 @@ def init_routes(app):
         form = LoginForm()
         if request.method == 'POST':
             logger.debug("Login form submitted")
-            if form.validate_on_submit():
-                logger.debug("Form validation successful")
-                user = User.query.filter_by(username=form.username.data).first()
-                if user and user.check_password(form.password.data):
+            # Process manual form submission (not using WTForms)
+            username = request.form.get('username')
+            password = request.form.get('password')
+            logger.debug(f"Login attempt for username: {username}")
+            
+            if username and password:
+                user = User.query.filter_by(username=username).first()
+                if user and user.check_password(password):
                     logger.debug("User authenticated successfully")
                     login_user(user)
                     next_page = request.args.get('next')
@@ -48,9 +52,17 @@ def init_routes(app):
                     logger.debug("Authentication failed")
                     flash('Login unsuccessful. Please check username and password', 'danger')
             else:
-                logger.debug("Form validation errors: %s", form.errors)
+                logger.debug("Missing username or password")
+                flash('Username and password are required', 'danger')
         
         return render_template('login.html', form=form)
+    
+    # Direct login page (alternative)
+    @app.route('/login_direct', methods=['GET'])
+    def login_direct():
+        if current_user.is_authenticated:
+            return redirect(url_for('home'))
+        return render_template('login_direct.html')
 
     # Registration page (for initial setup)
     @app.route('/register', methods=['GET', 'POST'])
@@ -63,24 +75,43 @@ def init_routes(app):
         form = RegistrationForm()
         if request.method == 'POST':
             logger.debug("Registration form submitted")
-            if form.validate_on_submit():
-                logger.debug("Form validation successful")
+            # Process manual form submission (not using WTForms)
+            username = request.form.get('username')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            confirm_password = request.form.get('confirm_password')
+            
+            logger.debug(f"Registration attempt for username: {username}, email: {email}")
+            
+            if username and email and password and confirm_password:
+                if password != confirm_password:
+                    flash('Passwords must match', 'danger')
+                    return render_template('register_direct.html')
+                
                 try:
-                    user = User(username=form.username.data, email=form.email.data)
-                    user.set_password(form.password.data)
+                    user = User(username=username, email=email)
+                    user.set_password(password)
                     db.session.add(user)
                     db.session.commit()
                     logger.debug("User created successfully")
                     flash('Your account has been created! You can now log in.', 'success')
-                    return redirect(url_for('login'))
+                    return redirect(url_for('login_direct'))
                 except Exception as e:
                     logger.error("Error creating user: %s", str(e))
                     db.session.rollback()
                     flash(f'Error creating account: {str(e)}', 'danger')
             else:
-                logger.debug("Form validation errors: %s", form.errors)
+                logger.debug("Missing required fields")
+                flash('All fields are required', 'danger')
         
         return render_template('login.html', form=form, register=True)
+    
+    # Direct registration page (alternative)
+    @app.route('/register_direct', methods=['GET'])
+    def register_direct():
+        if current_user.is_authenticated:
+            return redirect(url_for('home'))
+        return render_template('register_direct.html')
 
     # Logout route
     @app.route('/logout')

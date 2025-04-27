@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+
+{% block title %}Register Direct - Energy Anomaly Detection{% endblock %}
+
+{% block full_content %}
+<div class="login-page">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="login-card">
+                    <div class="login-header text-center">
+                        <div class="login-logo">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <h2>Create an Account</h2>
+                        <p class="text-muted">Join our platform to detect energy anomalies</p>
+                    </div>
+                    
+                    <!-- Flash messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <!-- Registration Form -->
+                    <form method="POST" action="/register">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="confirm_password" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm password" required>
+                        </div>
+                        
+                        <div class="d-grid mb-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Register</button>
+                        </div>
+                        
+                        <div class="text-center">
+                            <p>Already have an account? <a href="/login_direct">Login</a></p>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Back to Get Started -->
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('get_started') }}" class="text-white">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Get Started
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
