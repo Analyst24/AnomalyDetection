@@ -40,7 +40,11 @@ def init_routes(app):
             logger.debug("User already authenticated, redirecting to home")
             return redirect(url_for('home'))
         
-        form = LoginForm()
+        # For GET requests, redirect to the direct login page
+        if request.method == 'GET':
+            return redirect(url_for('login_direct'))
+        
+        # Process POST requests (form submission)
         if request.method == 'POST':
             logger.debug("Login form submitted")
             # Process manual form submission (not using WTForms)
@@ -58,11 +62,14 @@ def init_routes(app):
                 else:
                     logger.debug("Authentication failed")
                     flash('Login unsuccessful. Please check username and password', 'danger')
+                    return redirect(url_for('login_direct'))
             else:
                 logger.debug("Missing username or password")
                 flash('Username and password are required', 'danger')
+                return redirect(url_for('login_direct'))
         
-        return render_template('login.html', form=form)
+        # Fallback
+        return redirect(url_for('login_direct'))
     
     # Direct login page (alternative)
     @app.route('/login_direct', methods=['GET'])
@@ -79,7 +86,11 @@ def init_routes(app):
             logger.debug("User already authenticated, redirecting to home")
             return redirect(url_for('home'))
         
-        form = RegistrationForm()
+        # For GET requests, redirect to the direct register page
+        if request.method == 'GET':
+            return redirect(url_for('register_direct'))
+        
+        # Process POST requests (form submission)
         if request.method == 'POST':
             logger.debug("Registration form submitted")
             # Process manual form submission (not using WTForms)
@@ -93,7 +104,7 @@ def init_routes(app):
             if username and email and password and confirm_password:
                 if password != confirm_password:
                     flash('Passwords must match', 'danger')
-                    return render_template('register_direct.html')
+                    return redirect(url_for('register_direct'))
                 
                 try:
                     user = User(username=username, email=email)
@@ -107,11 +118,14 @@ def init_routes(app):
                     logger.error("Error creating user: %s", str(e))
                     db.session.rollback()
                     flash(f'Error creating account: {str(e)}', 'danger')
+                    return redirect(url_for('register_direct'))
             else:
                 logger.debug("Missing required fields")
                 flash('All fields are required', 'danger')
+                return redirect(url_for('register_direct'))
         
-        return render_template('login.html', form=form, register=True)
+        # Fallback
+        return redirect(url_for('register_direct'))
     
     # Direct registration page (alternative)
     @app.route('/register_direct', methods=['GET'])

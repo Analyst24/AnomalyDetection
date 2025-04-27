@@ -4,6 +4,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 
@@ -31,6 +32,14 @@ app.config["WTF_CSRF_SECRET_KEY"] = os.environ.get("SESSION_SECRET", "energy-det
 
 # Initialize SQLAlchemy with the app
 db.init_app(app)
+
+# Initialize CSRF protection
+csrf = CSRFProtect()
+csrf.init_app(app)
+
+# CSRF exempt routes (for direct login/register)
+csrf.exempt('routes.login')
+csrf.exempt('routes.register')
 
 # Setup Flask-Login
 login_manager = LoginManager()
