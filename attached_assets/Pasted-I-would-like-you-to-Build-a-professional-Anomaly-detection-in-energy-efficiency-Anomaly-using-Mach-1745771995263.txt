@@ -1,0 +1,52 @@
+I would like you to Build a professional Anomaly detection in energy & efficiency Anomaly using Machine Learning. The project should strictly follow the points below:
+1. System Structure
+•	Get Started Page:
+o	A modern, professional "Get Started" page featuring dynamic/moving charts or animations related to energy consumption.
+o	Minimal text, highly visual introduction to the system.
+•	Login Page:
+o	Simple, secure login (Username and Password fields).
+o	Background image related to energy (power stations, smart grids, etc.).
+o	No sidebar should appear on this page.
+o	Consistent dark theme across all pages.
+•	Main Interface (after login):
+A collapsible side panel should allow smooth navigation with the following sections:
+o	Home (simple, professional welcome screen with energy visuals)
+o	Dashboard (highly visual; detailed below)
+o	Upload Data (upload CSV datasets)
+o	Run Detection (initiate anomaly detection using selected algorithms)
+o	Results (graphical anomaly insights)
+o	Model Insights (view model performance and statistics)
+o	Recommendations (suggest improvements based on anomalies)
+o	Settings (manage system configurations)
+o	Logout
+2. Dashboard and Visualizations
+•	The Dashboard must be very visual, with minimal text.
+•	Include interactive graphs, charts, heatmaps, and dynamic figures showing:
+o	Energy Consumption Overview
+o	Anomaly Distribution (anomalies marked with red markers or shaded zones)
+o	Anomaly Types (pie or bar charts)
+o	Time of Day Analysis (heatmaps or bar graphs)
+•	Pictures/icons related to energy must be integrated (e.g., solar panels, meters, electricity grids).
+•	Use Plotly, Seaborn, or similar Python visualization libraries for professional, high-quality charts.
+•	Highlight anomalies clearly and professionally.
+3. Machine Learning Algorithms to Use
+The system should detect anomalies using:
+•	Isolation Forest
+•	AutoEncoders
+•	K-Means Clustering
+The models must work offline without any dependence on internet services. Python must be the only programming language used for this entire system.
+4. Project Objectives
+The system must address the following five project objectives:
+1.	To collect and pre-process energy consumption data for anomaly detection.
+2.	To explore and apply machine learning algorithms to identify anomalous energy usage patterns.
+3.	To evaluate the performance of different anomaly detection models using accuracy, precision, and recall metrics.
+4.	To develop a visualization tool for real-time monitoring of detected anomalies.
+5.	To provide recommendations for energy efficiency improvements based on detected anomalies.
+5. Additional Key Requirements
+•	Use a dark professional theme throughout the system.
+•	Ensure smooth user experience (UX) with fast loading charts and transitions.
+•	Copyright notice must appear in the system footer:
+© 2025 Opulent Chikwiramakomo. All rights reserved.
+•	Focus more on visual interpretation rather than text explanations.
+•	The system should be scalable for future improvements, such as adding forecasting or predictive capabilities.
+
