@@ -28,35 +28,57 @@ def init_routes(app):
     # Login page
     @app.route('/login', methods=['GET', 'POST'])
     def login():
+        logger.debug("Login route accessed. Method: %s", request.method)
         if current_user.is_authenticated:
+            logger.debug("User already authenticated, redirecting to home")
             return redirect(url_for('home'))
         
         form = LoginForm()
-        if form.validate_on_submit():
-            user = User.query.filter_by(username=form.username.data).first()
-            if user and user.check_password(form.password.data):
-                login_user(user)
-                next_page = request.args.get('next')
-                return redirect(next_page or url_for('home'))
+        if request.method == 'POST':
+            logger.debug("Login form submitted")
+            if form.validate_on_submit():
+                logger.debug("Form validation successful")
+                user = User.query.filter_by(username=form.username.data).first()
+                if user and user.check_password(form.password.data):
+                    logger.debug("User authenticated successfully")
+                    login_user(user)
+                    next_page = request.args.get('next')
+                    return redirect(next_page or url_for('home'))
+                else:
+                    logger.debug("Authentication failed")
+                    flash('Login unsuccessful. Please check username and password', 'danger')
             else:
-                flash('Login unsuccessful. Please check username and password', 'danger')
+                logger.debug("Form validation errors: %s", form.errors)
         
         return render_template('login.html', form=form)
 
     # Registration page (for initial setup)
     @app.route('/register', methods=['GET', 'POST'])
     def register():
+        logger.debug("Register route accessed. Method: %s", request.method)
         if current_user.is_authenticated:
+            logger.debug("User already authenticated, redirecting to home")
             return redirect(url_for('home'))
         
         form = RegistrationForm()
-        if form.validate_on_submit():
-            user = User(username=form.username.data, email=form.email.data)
-            user.set_password(form.password.data)
-            db.session.add(user)
-            db.session.commit()
-            flash('Your account has been created! You can now log in.', 'success')
-            return redirect(url_for('login'))
+        if request.method == 'POST':
+            logger.debug("Registration form submitted")
+            if form.validate_on_submit():
+                logger.debug("Form validation successful")
+                try:
+                    user = User(username=form.username.data, email=form.email.data)
+                    user.set_password(form.password.data)
+                    db.session.add(user)
+                    db.session.commit()
+                    logger.debug("User created successfully")
+                    flash('Your account has been created! You can now log in.', 'success')
+                    return redirect(url_for('login'))
+                except Exception as e:
+                    logger.error("Error creating user: %s", str(e))
+                    db.session.rollback()
+                    flash(f'Error creating account: {str(e)}', 'danger')
+            else:
+                logger.debug("Form validation errors: %s", form.errors)
         
         return render_template('login.html', form=form, register=True)
 
