@@ -23,16 +23,12 @@
         </div>
         
         <div class="d-grid gap-3 d-md-flex justify-content-md-center">
-            <form action="{{ url_for('login') }}" method="GET" style="display:inline;">
-                <button type="submit" class="btn get-started-btn">
-                    <i class="fas fa-sign-in-alt me-2"></i> Login
-                </button>
-            </form>
-            <form action="{{ url_for('register') }}" method="GET" style="display:inline;">
-                <button type="submit" class="btn get-started-btn" style="background-color: var(--darker-bg); color: var(--secondary-color); border: 2px solid var(--secondary-color);">
-                    <i class="fas fa-user-plus me-2"></i> Register
-                </button>
-            </form>
+            <a href="{{ url_for('login') }}" class="btn get-started-btn">
+                <i class="fas fa-sign-in-alt me-2"></i> Login
+            </a>
+            <a href="{{ url_for('register') }}" class="btn get-started-btn" style="background-color: var(--darker-bg); color: var(--secondary-color); border: 2px solid var(--secondary-color);">
+                <i class="fas fa-user-plus me-2"></i> Register
+            </a>
         </div>
     </div>
 </div>
