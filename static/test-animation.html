@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Grid Animation Test</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(rgba(0, 0, 20, 0.85), rgba(0, 0, 30, 0.9));
+        }
+        
+        .energy-grid-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            perspective: 1000px;
+            transform-style: preserve-3d;
+            overflow: hidden;
+        }
+        
+        .grid-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            animation: gridRotate 120s infinite linear;
+            transition: transform 0.3s ease-out;
+        }
+        
+        @keyframes gridRotate {
+            0% {
+                transform: rotateX(75deg) rotateZ(0deg);
+            }
+            100% {
+                transform: rotateX(75deg) rotateZ(360deg);
+            }
+        }
+        
+        /* Smart grid patterns */
+        .grid-container:before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(26, 188, 156, 0.05) 50px, transparent 51px),
+                repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(26, 188, 156, 0.05) 50px, transparent 51px);
+            background-size: 50px 50px;
+            animation: gridMove 60s infinite linear;
+        }
+        
+        @keyframes gridMove {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(50px, 50px);
+            }
+        }
+        
+        .horizontal-lines, .vertical-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .horizontal-lines:before, .horizontal-lines:after,
+        .vertical-lines:before, .vertical-lines:after {
+            content: "";
+            position: absolute;
+            background-size: 50px 50px;
+        }
+        
+        .horizontal-lines:before {
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background-image: linear-gradient(to right, rgba(26, 188, 156, 0.1) 1px, transparent 1px);
+            animation: horizontalMove 30s infinite linear;
+        }
+        
+        .vertical-lines:before {
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background-image: linear-gradient(to bottom, rgba(26, 188, 156, 0.1) 1px, transparent 1px);
+            animation: verticalMove 30s infinite linear;
+        }
+        
+        @keyframes horizontalMove {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(50px);
+            }
+        }
+        
+        @keyframes verticalMove {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(50px);
+            }
+        }
+        
+        .energy-nodes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+        
+        .energy-nodes:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
+                radial-gradient(circle at 75% 35%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
+                radial-gradient(circle at 45% 65%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
+                radial-gradient(circle at 80% 80%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
+                radial-gradient(circle at 15% 85%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
+                radial-gradient(circle at 60% 15%, rgba(26, 188, 156, 0.8) 1px, transparent 6px);
+            background-repeat: repeat;
+            background-size: 400px 400px;
+            animation: nodePulse 3s infinite ease-in-out;
+        }
+        
+        @keyframes nodePulse {
+            0%, 100% {
+                opacity: 0.5;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+        }
+        
+        .energy-pulses {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+        }
+        
+        .energy-pulses:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, transparent 0%, rgba(26, 188, 156, 0.2) 50%, transparent 100%),
+                linear-gradient(180deg, transparent 0%, rgba(52, 152, 219, 0.1) 50%, transparent 100%);
+            background-size: 200% 200%, 200% 200%;
+            animation: energyPulse 10s infinite linear;
+        }
+        
+        /* Energy flow lines (data transfer) */
+        .energy-pulses:after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, 
+                transparent 0%, 
+                transparent 45%, 
+                rgba(26, 188, 156, 0.15) 45%, 
+                rgba(26, 188, 156, 0.15) 55%, 
+                transparent 55%, 
+                transparent 100%),
+                linear-gradient(135deg, 
+                transparent 0%, 
+                transparent 45%, 
+                rgba(52, 152, 219, 0.15) 45%, 
+                rgba(52, 152, 219, 0.15) 55%, 
+                transparent 55%, 
+                transparent 100%);
+            background-size: 30px 30px, 30px 30px;
+            animation: flowLines 3s infinite linear;
+        }
+        
+        @keyframes flowLines {
+            0% {
+                background-position: 0 0, 0 0;
+            }
+            100% {
+                background-position: 60px 60px, 60px 60px;
+            }
+        }
+        
+        @keyframes energyPulse {
+            0% {
+                background-position: 0% 0%, 100% 100%;
+            }
+            25% {
+                background-position: 100% 0%, 0% 100%;
+            }
+            50% {
+                background-position: 100% 100%, 0% 0%;
+            }
+            75% {
+                background-position: 0% 100%, 100% 0%;
+            }
+            100% {
+                background-position: 0% 0%, 100% 100%;
+            }
+        }
+        
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            color: white;
+            padding-top: 40vh;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            color: #1abc9c;
+        }
+    </style>
+</head>
+<body>
+    <div class="energy-grid-background">
+        <div class="grid-container">
+            <div class="horizontal-lines"></div>
+            <div class="vertical-lines"></div>
+            <div class="energy-nodes"></div>
+            <div class="energy-pulses"></div>
+        </div>
+    </div>
+    
+    <div class="content">
+        <h1>Energy Grid Animation Test</h1>
+        <p>This is a standalone test of the energy grid animation</p>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create dynamic energy nodes
+            const gridBackground = document.querySelector('.energy-grid-background');
+            
+            // Make the animation respond to mouse movement
+            document.addEventListener('mousemove', function(e) {
+                const xPos = (e.clientX / window.innerWidth) - 0.5;
+                const yPos = (e.clientY / window.innerHeight) - 0.5;
+                
+                gridBackground.style.transform = `perspective(1000px) rotateX(${yPos * 5}deg) rotateY(${xPos * 5}deg)`;
+            });
+            
+            // Create additional energy nodes
+            const numNodes = 15;
+            const nodesContainer = document.createElement('div');
+            nodesContainer.className = 'dynamic-nodes';
+            nodesContainer.style.position = 'absolute';
+            nodesContainer.style.width = '100%';
+            nodesContainer.style.height = '100%';
+            nodesContainer.style.zIndex = '4';
+            
+            for (let i = 0; i < numNodes; i++) {
+                const node = document.createElement('div');
+                node.className = 'energy-node';
+                
+                // Random position
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                
+                // Random size
+                const size = 3 + Math.random() * 5;
+                
+                // Random animation duration
+                const duration = 2 + Math.random() * 4;
+                
+                // Random delay
+                const delay = Math.random() * 2;
+                
+                // Set styles
+                node.style.position = 'absolute';
+                node.style.left = `${x}%`;
+                node.style.top = `${y}%`;
+                node.style.width = `${size}px`;
+                node.style.height = `${size}px`;
+                node.style.backgroundColor = 'rgba(26, 188, 156, 0.8)';
+                node.style.borderRadius = '50%';
+                node.style.boxShadow = '0 0 10px rgba(26, 188, 156, 0.6), 0 0 20px rgba(26, 188, 156, 0.3)';
+                node.style.animation = `pulseNode ${duration}s infinite ease-in-out ${delay}s`;
+                
+                nodesContainer.appendChild(node);
+            }
+            
+            // Add keyframes for node animation if not already present
+            if (!document.getElementById('node-animation-style')) {
+                const style = document.createElement('style');
+                style.id = 'node-animation-style';
+                style.textContent = `
+                    @keyframes pulseNode {
+                        0%, 100% { transform: scale(1); opacity: 0.6; }
+                        50% { transform: scale(1.5); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            gridBackground.appendChild(nodesContainer);
+        });
+    </script>
+</body>
+</html>
