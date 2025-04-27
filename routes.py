@@ -23,6 +23,13 @@ def init_routes(app):
     def get_started():
         if current_user.is_authenticated:
             return redirect(url_for('home'))
+        return render_template('index.html')
+        
+    # Original welcome page (kept for reference)
+    @app.route('/original')
+    def original_get_started():
+        if current_user.is_authenticated:
+            return redirect(url_for('home'))
         return render_template('get_started.html')
 
     # Login page
