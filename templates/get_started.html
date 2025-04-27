@@ -23,10 +23,10 @@
         </div>
         
         <div class="d-grid gap-3 d-md-flex justify-content-md-center">
-            <a href="{{ url_for('login') }}" class="btn get-started-btn">
+            <a href="/login" style="display: inline-block; padding: 12px 24px; margin: 10px; border-radius: 5px; background-color: #1abc9c; color: white; text-decoration: none; font-weight: bold; font-size: 16px;">
                 <i class="fas fa-sign-in-alt me-2"></i> Login
             </a>
-            <a href="{{ url_for('register') }}" class="btn get-started-btn" style="background-color: var(--darker-bg); color: var(--secondary-color); border: 2px solid var(--secondary-color);">
+            <a href="/register" style="display: inline-block; padding: 12px 24px; margin: 10px; border-radius: 5px; background-color: #0f0f1a; color: #1abc9c; text-decoration: none; font-weight: bold; font-size: 16px; border: 2px solid #1abc9c;">
                 <i class="fas fa-user-plus me-2"></i> Register
             </a>
         </div>
@@ -36,6 +36,8 @@
 {% block extra_js %}
 <!-- Particles.js for background animation -->
 <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<!-- Auth related JavaScript -->
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize particles background
