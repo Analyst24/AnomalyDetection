@@ -20,13 +20,23 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "energy-detection-system-secret-key")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Configure the PostgreSQL database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+# Configure database - supports both PostgreSQL and SQLite for offline use
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    # Use PostgreSQL if DATABASE_URL is provided
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_recycle": 300,
+        "pool_pre_ping": True,
+    }
+else:
+    # Fallback to SQLite for offline use
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(basedir, 'instance', 'energy_anomaly.db')}"
+    # Make sure the instance directory exists
+    os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,
-    "pool_pre_ping": True,
-}
 app.config["WTF_CSRF_ENABLED"] = True
 app.config["WTF_CSRF_SECRET_KEY"] = os.environ.get("SESSION_SECRET", "energy-detection-system-csrf-key")
 
@@ -58,3 +68,7 @@ with app.app_context():
 def load_user(user_id):
     from models import User
     return User.query.get(int(user_id))
+    
+# Import and initialize routes
+from routes import init_routes
+init_routes(app)

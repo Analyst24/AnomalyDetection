@@ -1,0 +1,59 @@
+Energy Anomaly Detection System - Installation Guide
+====================================================
+
+Below are the requirements needed to run this application:
+
+Python Dependencies:
+-------------------
+flask==2.2.3
+flask-login==0.6.2
+flask-sqlalchemy==3.0.3
+flask-wtf==1.1.1
+email-validator==2.0.0
+gunicorn==23.0.0
+numpy==1.24.3
+pandas==2.0.1
+scikit-learn==1.2.2
+psycopg2-binary==2.9.6
+python-dotenv==1.0.0
+werkzeug==2.2.3
+
+You can install these by running:
+pip install flask flask-login flask-sqlalchemy flask-wtf email-validator gunicorn numpy pandas scikit-learn psycopg2-binary python-dotenv werkzeug==2.2.3
+
+Optional: If you need the TensorFlow-based autoencoder, install:
+pip install tensorflow==2.12.0
+
+Database Setup:
+--------------
+1. For PostgreSQL:
+   - Create a database for the application
+   - Set up connection details in .env file (copy from .env.example)
+
+2. For SQLite (automatic fallback):
+   - No additional setup required
+   - SQLite database will be created in the "instance" folder
+
+Environment Variables:
+--------------------
+Create a .env file in the project root with the following variables:
+
+DATABASE_URL=postgresql://username:password@localhost:5432/energy_anomaly_db
+SESSION_SECRET=your-secure-secret-key
+
+If DATABASE_URL is not provided, SQLite will be used automatically.
+
+Running the Application:
+----------------------
+1. With a virtual environment:
+   python -m venv venv
+   # On Windows
+   .\venv\Scripts\activate
+   # On macOS/Linux
+   source venv/bin/activate
+   python main.py
+
+2. Direct run:
+   python main.py
+   
+The application will be available at http://localhost:5000
