@@ -340,7 +340,8 @@ a:hover {
 
 /* Login Page */
 .login-page {
-  background: linear-gradient(rgba(0, 0, 20, 0.85), rgba(0, 0, 30, 0.9));
+  background: linear-gradient(rgba(10, 10, 20, 0.8), rgba(10, 10, 20, 0.8)), 
+              url('../images/energy-bg.jpg') no-repeat center center/cover;
   height: 100vh;
   display: flex;
   align-items: center;
@@ -349,226 +350,15 @@ a:hover {
   overflow: hidden;
 }
 
-/* Energy grid animation */
-.energy-grid-background {
+/* Particles container */
+.particles-container {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   z-index: 1;
-  perspective: 1000px;
-  transform-style: preserve-3d;
-  overflow: hidden;
-}
-
-.grid-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  animation: gridRotate 120s infinite linear;
-  transition: transform 0.3s ease-out;
-}
-
-@keyframes gridRotate {
-  0% {
-    transform: rotateX(75deg) rotateZ(0deg);
-  }
-  100% {
-    transform: rotateX(75deg) rotateZ(360deg);
-  }
-}
-
-/* Smart grid patterns */
-.grid-container:before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background-image: 
-    repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(26, 188, 156, 0.05) 50px, transparent 51px),
-    repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(26, 188, 156, 0.05) 50px, transparent 51px);
-  background-size: 50px 50px;
-  animation: gridMove 60s infinite linear;
-}
-
-@keyframes gridMove {
-  0% {
-    transform: translate(0, 0);
-  }
-  100% {
-    transform: translate(50px, 50px);
-  }
-}
-
-.horizontal-lines, .vertical-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.horizontal-lines:before, .horizontal-lines:after,
-.vertical-lines:before, .vertical-lines:after {
-  content: "";
-  position: absolute;
-  background-size: 50px 50px;
-}
-
-.horizontal-lines:before {
-  width: 200%;
-  height: 200%;
-  top: -50%;
-  left: -50%;
-  background-image: linear-gradient(to right, rgba(26, 188, 156, 0.1) 1px, transparent 1px);
-  animation: horizontalMove 30s infinite linear;
-}
-
-.vertical-lines:before {
-  width: 200%;
-  height: 200%;
-  top: -50%;
-  left: -50%;
-  background-image: linear-gradient(to bottom, rgba(26, 188, 156, 0.1) 1px, transparent 1px);
-  animation: verticalMove 30s infinite linear;
-}
-
-@keyframes horizontalMove {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(50px);
-  }
-}
-
-@keyframes verticalMove {
-  0% {
-    transform: translateY(0);
-  }
-  100% {
-    transform: translateY(50px);
-  }
-}
-
-.energy-nodes {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-}
-
-.energy-nodes:before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    radial-gradient(circle at 25% 25%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
-    radial-gradient(circle at 75% 35%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
-    radial-gradient(circle at 45% 65%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
-    radial-gradient(circle at 80% 80%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
-    radial-gradient(circle at 15% 85%, rgba(26, 188, 156, 0.8) 1px, transparent 6px),
-    radial-gradient(circle at 60% 15%, rgba(26, 188, 156, 0.8) 1px, transparent 6px);
-  background-repeat: repeat;
-  background-size: 400px 400px;
-  animation: nodePulse 3s infinite ease-in-out;
-}
-
-@keyframes nodePulse {
-  0%, 100% {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-}
-
-.energy-pulses {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  z-index: 3;
-}
-
-.energy-pulses:before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: 
-    linear-gradient(90deg, transparent 0%, rgba(26, 188, 156, 0.2) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(52, 152, 219, 0.1) 50%, transparent 100%);
-  background-size: 200% 200%, 200% 200%;
-  animation: energyPulse 10s infinite linear;
-}
-
-/* Energy flow lines (data transfer) */
-.energy-pulses:after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: 
-    linear-gradient(45deg, 
-      transparent 0%, 
-      transparent 45%, 
-      rgba(26, 188, 156, 0.15) 45%, 
-      rgba(26, 188, 156, 0.15) 55%, 
-      transparent 55%, 
-      transparent 100%),
-    linear-gradient(135deg, 
-      transparent 0%, 
-      transparent 45%, 
-      rgba(52, 152, 219, 0.15) 45%, 
-      rgba(52, 152, 219, 0.15) 55%, 
-      transparent 55%, 
-      transparent 100%);
-  background-size: 30px 30px, 30px 30px;
-  animation: flowLines 3s infinite linear;
-}
-
-@keyframes flowLines {
-  0% {
-    background-position: 0 0, 0 0;
-  }
-  100% {
-    background-position: 60px 60px, 60px 60px;
-  }
-}
-
-@keyframes energyPulse {
-  0% {
-    background-position: 0% 0%, 100% 100%;
-  }
-  25% {
-    background-position: 100% 0%, 0% 100%;
-  }
-  50% {
-    background-position: 100% 100%, 0% 0%;
-  }
-  75% {
-    background-position: 0% 100%, 100% 0%;
-  }
-  100% {
-    background-position: 0% 0%, 100% 100%;
-  }
+  pointer-events: none;
 }
 
 .login-page .container {

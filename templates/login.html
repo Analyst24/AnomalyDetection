@@ -10,15 +10,8 @@
 
 {% block full_content %}
 <div class="login-page">
-    <!-- Energy grid animation background -->
-    <div class="energy-grid-background">
-        <div class="grid-container">
-            <div class="horizontal-lines"></div>
-            <div class="vertical-lines"></div>
-            <div class="energy-nodes"></div>
-            <div class="energy-pulses"></div>
-        </div>
-    </div>
+    <!-- Particles.js container for background animation -->
+    <div id="particles-js" class="particles-container"></div>
     
     <div class="container">
         <div class="row justify-content-center">
@@ -160,6 +153,7 @@
     </div>
 </div>
 
-<!-- Energy grid animation JavaScript -->
+<!-- Particles.js and Auth related JavaScript -->
+<script src="{{ url_for('static', filename='js/particles.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 {% endblock %}
