@@ -16,16 +16,18 @@ db = SQLAlchemy(model_class=Base)
 
 # Create the Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
+app.secret_key = os.environ.get("SESSION_SECRET", "energy-detection-system-secret-key")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Configure the SQLite database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///energy_anomaly.db")
+# Configure the PostgreSQL database
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
+app.config["WTF_CSRF_ENABLED"] = True
+app.config["WTF_CSRF_SECRET_KEY"] = os.environ.get("SESSION_SECRET", "energy-detection-system-csrf-key")
 
 # Initialize SQLAlchemy with the app
 db.init_app(app)
