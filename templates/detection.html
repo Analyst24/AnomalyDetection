@@ -1,0 +1,249 @@
+{% extends "layout.html" %}
+
+{% block title %}Run Detection - Energy Anomaly Detection{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-0"><i class="fas fa-search me-2"></i> Run Anomaly Detection</h1>
+            <p class="text-muted">Analyze your energy data with advanced machine learning algorithms</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Detection Form -->
+        <div class="col-lg-5 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Configure Detection</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="detection-form">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-4">
+                            <label for="dataset" class="form-label">{{ form.dataset.label }}</label>
+                            {{ form.dataset(class="form-select") }}
+                            {% if form.dataset.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.dataset.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Choose a dataset to analyze</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="algorithm" class="form-label">{{ form.algorithm.label }}</label>
+                            {{ form.algorithm(class="form-select") }}
+                            {% if form.algorithm.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.algorithm.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Select the algorithm to detect anomalies</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div id="dataset-preview">
+                                <!-- Dataset preview will be loaded here dynamically -->
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Select a dataset to see preview information
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Algorithm Information and Visualization -->
+        <div class="col-lg-7">
+            <!-- Algorithm Info Cards -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Algorithm Information</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Isolation Forest -->
+                    <div class="algorithm-info" id="isolation_forest-info">
+                        <h5 class="mb-3"><i class="fas fa-tree me-2"></i> Isolation Forest</h5>
+                        <p>Isolation Forest is an ensemble-based algorithm that explicitly isolates anomalies by building decision trees based on randomly selected features and split values.</p>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h6>How It Works:</h6>
+                                <ul>
+                                    <li>Builds multiple isolation trees</li>
+                                    <li>Anomalies require fewer splits to isolate</li>
+                                    <li>Calculates anomaly score based on path length</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Best Used For:</h6>
+                                <ul>
+                                    <li>Large datasets with high dimensions</li>
+                                    <li>When anomalies are sparse and different</li>
+                                    <li>Fast detection with minimal training</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- AutoEncoder -->
+                    <div class="algorithm-info" id="autoencoder-info">
+                        <h5 class="mb-3"><i class="fas fa-brain me-2"></i> AutoEncoder</h5>
+                        <p>AutoEncoders are neural networks that learn to compress and reconstruct data. Anomalies are identified by high reconstruction error, as they don't fit the learned compression patterns.</p>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h6>How It Works:</h6>
+                                <ul>
+                                    <li>Compresses data to a lower dimension</li>
+                                    <li>Reconstructs original data from compressed form</li>
+                                    <li>Measures reconstruction error to detect anomalies</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Best Used For:</h6>
+                                <ul>
+                                    <li>Complex patterns in time series data</li>
+                                    <li>Capturing temporal dependencies</li>
+                                    <li>When you have sufficient training data</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- K-Means -->
+                    <div class="algorithm-info" id="kmeans-info">
+                        <h5 class="mb-3"><i class="fas fa-object-group me-2"></i> K-Means Clustering</h5>
+                        <p>K-Means groups data points into clusters. Points that are far from any cluster center are considered anomalies, as they don't belong to any normal pattern group.</p>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h6>How It Works:</h6>
+                                <ul>
+                                    <li>Groups data into K clusters</li>
+                                    <li>Calculates distance to nearest cluster center</li>
+                                    <li>Points with high distances are anomalies</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Best Used For:</h6>
+                                <ul>
+                                    <li>Well-separated data patterns</li>
+                                    <li>When anomalies form distinct clusters</li>
+                                    <li>Simpler implementation with good interpretability</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Algorithm Visualization -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Algorithm Visualization</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container full-height-chart">
+                        <canvas id="algorithm-visualization"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Overlay -->
+<div id="processing-overlay" class="position-fixed top-0 start-0 w-100 h-100" style="background-color: rgba(10, 10, 20, 0.8); z-index: 9999; display: none;">
+    <div class="position-absolute top-50 start-50 translate-middle text-center text-white">
+        <div class="spinner-border text-primary mb-4" style="width: 5rem; height: 5rem;" role="status">
+            <span class="visually-hidden">Processing...</span>
+        </div>
+        <h3 class="mb-3">Processing Your Data</h3>
+        <p class="lead mb-4">Please wait while the algorithm analyzes your dataset</p>
+        <div class="progress" style="height: 10px; width: 300px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+        </div>
+        <div id="processing-status" class="mt-3">Initializing...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/detection.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add data attributes to dataset options for JS access
+    const datasetSelect = document.getElementById('dataset');
+    
+    if (datasetSelect) {
+        {% for dataset in form.dataset.choices %}
+            {% set ds = datasets|selectattr('id', 'eq', dataset[0])|first %}
+            {% if ds %}
+                const option{{ dataset[0] }} = datasetSelect.querySelector(`option[value="{{ dataset[0] }}"]`);
+                if (option{{ dataset[0] }}) {
+                    option{{ dataset[0] }}.setAttribute('data-filename', "{{ ds.filename }}");
+                    option{{ dataset[0] }}.setAttribute('data-rows', "{{ ds.row_count }}");
+                    option{{ dataset[0] }}.setAttribute('data-date', "{{ ds.upload_date }}");
+                }
+            {% endif %}
+        {% endfor %}
+    }
+    
+    // Handle processing overlay animation
+    const form = document.getElementById('detection-form');
+    const overlay = document.getElementById('processing-overlay');
+    const progressBar = overlay.querySelector('.progress-bar');
+    const statusElement = document.getElementById('processing-status');
+    
+    if (form && overlay) {
+        form.addEventListener('submit', function() {
+            overlay.style.display = 'block';
+            
+            // Simulate processing progress
+            let progress = 0;
+            const statuses = [
+                "Initializing...",
+                "Loading dataset...",
+                "Preprocessing data...",
+                "Extracting features...",
+                "Training model...",
+                "Detecting anomalies...",
+                "Calculating metrics...",
+                "Generating visualizations...",
+                "Finalizing results..."
+            ];
+            
+            const interval = setInterval(function() {
+                progress += Math.random() * 12;
+                if (progress > 100) progress = 100;
+                
+                progressBar.style.width = progress + '%';
+                
+                // Update status message based on progress
+                const statusIndex = Math.min(Math.floor(progress / 100 * statuses.length), statuses.length - 1);
+                statusElement.textContent = statuses[statusIndex];
+                
+                if (progress === 100) {
+                    clearInterval(interval);
+                    // Form will submit naturally, no need to handle redirect here
+                }
+            }, 800);
+        });
+    }
+});
+</script>
+{% endblock %}

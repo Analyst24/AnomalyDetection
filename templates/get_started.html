@@ -1,0 +1,233 @@
+{% extends "layout.html" %}
+
+{% block title %}Get Started - Energy Anomaly Detection{% endblock %}
+
+{% block full_content %}
+<div class="get-started-page">
+    <!-- Background animated particles -->
+    <div class="particles-container" id="particles-js"></div>
+    
+    <!-- Main content -->
+    <div class="get-started-content">
+        <div class="mb-4">
+            <i class="fas fa-bolt fa-4x energy-pulse" style="color: var(--secondary-color);"></i>
+        </div>
+        <h1 class="get-started-title">Energy Anomaly Detection</h1>
+        <p class="get-started-subtitle">
+            Advanced machine learning system for detecting anomalies in energy consumption patterns
+        </p>
+        
+        <!-- Animated energy consumption visualization -->
+        <div class="get-started-animation mb-5" id="energy-animation">
+            <canvas id="get-started-chart" height="200"></canvas>
+        </div>
+        
+        <div class="d-grid gap-3 d-md-flex justify-content-md-center">
+            <a href="{{ url_for('login') }}" class="btn get-started-btn">
+                <i class="fas fa-sign-in-alt me-2"></i> Login
+            </a>
+            <a href="{{ url_for('register') }}" class="btn get-started-btn" style="background-color: var(--darker-bg); color: var(--secondary-color); border: 2px solid var(--secondary-color);">
+                <i class="fas fa-user-plus me-2"></i> Register
+            </a>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<!-- Particles.js for background animation -->
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize particles background
+    if (typeof particlesJS !== 'undefined') {
+        particlesJS('particles-js', {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#1abc9c"
+                },
+                "shape": {
+                    "type": "circle",
+                    "stroke": {
+                        "width": 0,
+                        "color": "#000000"
+                    },
+                    "polygon": {
+                        "nb_sides": 5
+                    }
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": false,
+                    "anim": {
+                        "enable": false,
+                        "speed": 1,
+                        "opacity_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                    "anim": {
+                        "enable": false,
+                        "speed": 40,
+                        "size_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#1abc9c",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                    "attract": {
+                        "enable": false,
+                        "rotateX": 600,
+                        "rotateY": 1200
+                    }
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "grab"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+                "modes": {
+                    "grab": {
+                        "distance": 140,
+                        "line_linked": {
+                            "opacity": 1
+                        }
+                    },
+                    "bubble": {
+                        "distance": 400,
+                        "size": 40,
+                        "duration": 2,
+                        "opacity": 8,
+                        "speed": 3
+                    },
+                    "repulse": {
+                        "distance": 200,
+                        "duration": 0.4
+                    },
+                    "push": {
+                        "particles_nb": 4
+                    },
+                    "remove": {
+                        "particles_nb": 2
+                    }
+                }
+            },
+            "retina_detect": true
+        });
+    }
+    
+    // Create animated energy consumption chart
+    const ctx = document.getElementById('get-started-chart');
+    
+    if (ctx) {
+        // Generate a sine wave with random peaks (anomalies)
+        const generateData = () => {
+            const data = [];
+            const labels = [];
+            
+            for (let i = 0; i < 150; i++) {
+                // Base sine wave
+                let value = 50 + 20 * Math.sin(i * 0.1);
+                
+                // Add some noise
+                value += (Math.random() * 5 - 2.5);
+                
+                // Add anomalies at specific points
+                if (i % 25 === 0) {
+                    value += 30;
+                }
+                
+                data.push(value);
+                labels.push(i);
+            }
+            
+            return { data, labels };
+        };
+        
+        const { data, labels } = generateData();
+        
+        // Create chart with animation
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Energy Consumption',
+                    data: data,
+                    borderColor: '#1abc9c',
+                    backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false
+                    },
+                    y: {
+                        display: false,
+                        min: 0,
+                        max: 120
+                    }
+                },
+                animation: {
+                    duration: 2000
+                }
+            }
+        });
+        
+        // Animate the chart by updating it with new data
+        setInterval(() => {
+            const { data } = generateData();
+            chart.data.datasets[0].data = data;
+            chart.update();
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,434 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - Energy Anomaly Detection{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i> Energy Dashboard</h1>
+                <div>
+                    <div class="btn-group me-2">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="timeRangeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-calendar-alt me-1"></i> Last 7 Days
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="timeRangeDropdown">
+                            <li><a class="dropdown-item time-range-option" href="#" data-range="day">Last 24 Hours</a></li>
+                            <li><a class="dropdown-item time-range-option active" href="#" data-range="week">Last 7 Days</a></li>
+                            <li><a class="dropdown-item time-range-option" href="#" data-range="month">Last 30 Days</a></li>
+                            <li><a class="dropdown-item time-range-option" href="#" data-range="year">Last 12 Months</a></li>
+                        </ul>
+                    </div>
+                    <button id="refresh-dashboard" class="btn btn-outline-secondary">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <p class="text-muted">Comprehensive view of your energy consumption patterns and anomalies</p>
+        </div>
+    </div>
+    
+    <!-- Overview statistics -->
+    <div class="row mb-4" id="dashboard-content">
+        <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+            <div class="dashboard-stat">
+                <div>
+                    <div class="stat-value">{{ overview_data.dataset_count }}</div>
+                    <div class="stat-label">Total Datasets</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+            <div class="dashboard-stat">
+                <div>
+                    <div class="stat-value">{{ overview_data.result_count }}</div>
+                    <div class="stat-label">Total Analyses</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+            <div class="dashboard-stat">
+                <div>
+                    <div class="stat-value" id="total-anomalies">
+                        {% if overview_data.anomalies_by_hour %}
+                            {{ sum(overview_data.anomalies_by_hour.values) }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Detected Anomalies</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="dashboard-stat">
+                <div>
+                    <div class="stat-value energy-pulse">
+                        {% if overview_data.anomalies_by_hour and sum(overview_data.anomalies_by_hour.values) > 0 and results %}
+                            {% set latest_result = 0 %}
+                            {% for result in results %}
+                                {% if not latest_result or result.creation_date > latest_result.creation_date %}
+                                    {% set latest_result = result %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if latest_result %}
+                                {% set detected = latest_result.anomaly_count %}
+                                {% set total = latest_result.metrics.total_points if latest_result.metrics and latest_result.metrics.total_points else 100 %}
+                                {% set score = (1 - (detected / total)) * 100 %}
+                                {{ "%.1f"|format(score) }}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Efficiency Score</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row 1 -->
+    <div class="row mb-4">
+        <!-- Energy Consumption Overview -->
+        <div class="col-lg-8 mb-4 mb-lg-0">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Energy Consumption Overview</h5>
+                    <div class="btn-group chart-view-buttons">
+                        <button type="button" class="btn btn-sm btn-outline-secondary chart-view-toggle active" data-chart="consumption-overview-chart" data-type="line">
+                            <i class="fas fa-chart-line"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary chart-view-toggle" data-chart="consumption-overview-chart" data-type="bar">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container full-height-chart">
+                        <canvas id="consumption-overview-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Anomalies by Hour -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Anomalies by Hour of Day</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="anomalies-by-hour-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row 2 -->
+    <div class="row mb-4">
+        <!-- Results by Algorithm -->
+        <div class="col-lg-4 mb-4 mb-lg-0">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Results by Algorithm</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="results-by-algorithm-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Datasets Over Time -->
+        <div class="col-lg-4 mb-4 mb-lg-0">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Dataset Uploads</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="datasets-over-time-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Model Performance -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Model Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="model-performance-dashboard-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Results Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Analysis Results</h5>
+                    <a href="{{ url_for('results') }}" class="btn btn-sm btn-primary">View All Results</a>
+                </div>
+                <div class="card-body">
+                    {% if results %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Algorithm</th>
+                                        <th>Dataset</th>
+                                        <th>Anomalies</th>
+                                        <th>Date</th>
+                                        <th>Precision</th>
+                                        <th>Recall</th>
+                                        <th>F1 Score</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in results[:5] %}
+                                        <tr>
+                                            <td>
+                                                {% if result.algorithm == 'isolation_forest' %}
+                                                    <span class="badge bg-primary">Isolation Forest</span>
+                                                {% elif result.algorithm == 'autoencoder' %}
+                                                    <span class="badge bg-success">AutoEncoder</span>
+                                                {% elif result.algorithm == 'kmeans' %}
+                                                    <span class="badge bg-info">K-Means</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ result.dataset.filename }}</td>
+                                            <td>
+                                                <span class="badge badge-anomaly">{{ result.anomaly_count }}</span>
+                                            </td>
+                                            <td>{{ result.creation_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                {% if result.metrics and result.metrics.precision is defined %}
+                                                    {{ "%.2f"|format(result.metrics.precision) }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if result.metrics and result.metrics.recall is defined %}
+                                                    {{ "%.2f"|format(result.metrics.recall) }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if result.metrics and result.metrics.f1_score is defined %}
+                                                    {{ "%.2f"|format(result.metrics.f1_score) }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('results', result_id=result.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-line fa-3x mb-3 text-muted"></i>
+                            <p class="lead">No analysis results yet</p>
+                            <a href="{{ url_for('detection') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-search me-2"></i> Run Detection
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden element with overview data for JavaScript -->
+<div id="overview-data" style="display: none;">{{ overview_data|tojson }}</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Energy Consumption Overview chart
+    const consumptionCanvas = document.getElementById('consumption-overview-chart');
+    
+    if (consumptionCanvas) {
+        // Generate sample energy consumption data
+        const generateConsumptionData = () => {
+            const data = [];
+            const anomalies = [];
+            const labels = [];
+            
+            // Create dates for last 30 days
+            const now = new Date();
+            
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                labels.push(date.toISOString().split('T')[0]);
+                
+                // Base consumption with weekly pattern
+                let baseValue = 100 + (Math.random() * 20);
+                
+                // Weekend higher consumption
+                if (date.getDay() === 0 || date.getDay() === 6) {
+                    baseValue += 30;
+                }
+                
+                // Introduce some anomalies
+                let isAnomaly = false;
+                if (i === 5 || i === 12 || i === 27) {
+                    baseValue += 50 + (Math.random() * 30);
+                    isAnomaly = true;
+                }
+                
+                data.push(baseValue);
+                anomalies.push(isAnomaly ? baseValue : null);
+            }
+            
+            return { data, labels, anomalies };
+        };
+        
+        const { data, labels, anomalies } = generateConsumptionData();
+        
+        chartInstances['consumption-overview-chart'] = new Chart(consumptionCanvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Energy Consumption',
+                        data: data,
+                        borderColor: 'rgba(26, 188, 156, 1)',
+                        backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                        fill: true,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 2
+                    },
+                    {
+                        label: 'Anomalies',
+                        data: anomalies,
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        showLine: false
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Energy Consumption - Last 30 Days',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Consumption (kWh)',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Set up time range dropdown
+    const timeRangeOptions = document.querySelectorAll('.time-range-option');
+    if (timeRangeOptions.length > 0) {
+        timeRangeOptions.forEach(option => {
+            option.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Update dropdown button text
+                const dropdownButton = document.getElementById('timeRangeDropdown');
+                let rangeText = '';
+                
+                switch(this.getAttribute('data-range')) {
+                    case 'day':
+                        rangeText = 'Last 24 Hours';
+                        break;
+                    case 'week':
+                        rangeText = 'Last 7 Days';
+                        break;
+                    case 'month':
+                        rangeText = 'Last 30 Days';
+                        break;
+                    case 'year':
+                        rangeText = 'Last 12 Months';
+                        break;
+                }
+                
+                dropdownButton.innerHTML = `<i class="fas fa-calendar-alt me-1"></i> ${rangeText}`;
+                
+                // Update active class
+                timeRangeOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update chart title
+                const consumptionChart = chartInstances['consumption-overview-chart'];
+                if (consumptionChart) {
+                    consumptionChart.options.plugins.title.text = `Energy Consumption - ${rangeText}`;
+                    consumptionChart.update();
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

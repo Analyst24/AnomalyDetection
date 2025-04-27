@@ -1,0 +1,527 @@
+{% extends "layout.html" %}
+
+{% block title %}Home - Energy Anomaly Detection{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="mb-0"><i class="fas fa-home me-2"></i> Welcome, {{ current_user.username }}!</h1>
+                <button id="refresh-home" class="btn btn-outline-secondary">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <p class="text-muted">Welcome to your Energy Anomaly Detection Dashboard</p>
+        </div>
+    </div>
+    
+    <!-- System Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+            <div class="dashboard-stat">
+                <div>
+                    <div class="stat-value">{{ datasets_count }}</div>
+                    <div class="stat-label">Datasets</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+            <div class="dashboard-stat">
+                <div>
+                    <div class="stat-value">{{ results_count }}</div>
+                    <div class="stat-label">Analysis Results</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+            <div class="dashboard-stat">
+                <div>
+                    <div class="stat-value" id="anomaly-count">
+                        {% if recent_results %}
+                            {{ recent_results[0].anomaly_count }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Detected Anomalies</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="dashboard-stat">
+                <div>
+                    <div class="stat-value" id="efficiency-score">
+                        {% if recent_results %}
+                            {% set score = (1 - (recent_results[0].anomaly_count / 100)) * 100 %}
+                            {{ "%.1f"|format(score) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Efficiency Score</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Action Buttons -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Quick Actions</h5>
+                    <div class="row g-3">
+                        <div class="col-lg-3 col-md-6">
+                            <a href="{{ url_for('upload') }}" class="btn btn-primary d-flex align-items-center justify-content-between w-100 py-3">
+                                <span><i class="fas fa-upload me-2"></i> Upload Data</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <a href="{{ url_for('detection') }}" class="btn btn-primary d-flex align-items-center justify-content-between w-100 py-3">
+                                <span><i class="fas fa-search me-2"></i> Run Detection</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <a href="{{ url_for('results') }}" class="btn btn-primary d-flex align-items-center justify-content-between w-100 py-3">
+                                <span><i class="fas fa-chart-line me-2"></i> View Results</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <a href="{{ url_for('recommendations') }}" class="btn btn-primary d-flex align-items-center justify-content-between w-100 py-3">
+                                <span><i class="fas fa-lightbulb me-2"></i> Recommendations</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Results and Energy Visualization -->
+    <div class="row mb-4">
+        <!-- Recent Results -->
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Analysis Results</h5>
+                    <a href="{{ url_for('results') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_results %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Algorithm</th>
+                                        <th>Dataset</th>
+                                        <th>Anomalies</th>
+                                        <th>Date</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in recent_results %}
+                                        <tr>
+                                            <td>
+                                                {% if result.algorithm == 'isolation_forest' %}
+                                                    <span class="badge bg-primary">Isolation Forest</span>
+                                                {% elif result.algorithm == 'autoencoder' %}
+                                                    <span class="badge bg-success">AutoEncoder</span>
+                                                {% elif result.algorithm == 'kmeans' %}
+                                                    <span class="badge bg-info">K-Means</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ result.dataset.filename }}</td>
+                                            <td>
+                                                <span class="badge badge-anomaly">{{ result.anomaly_count }}</span>
+                                            </td>
+                                            <td>{{ result.creation_date.strftime('%Y-%m-%d') }}</td>
+                                            <td>
+                                                <a href="{{ url_for('results', result_id=result.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-line fa-3x mb-3 text-muted"></i>
+                            <p class="lead">No analysis results yet</p>
+                            <a href="{{ url_for('detection') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-search me-2"></i> Run Your First Detection
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Energy Visualization -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Energy Consumption Visualization</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container full-height-chart">
+                        <canvas id="energy-visualization-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Performance -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">System Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <canvas id="model-performance-home-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <canvas id="anomaly-distribution-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize energy visualization chart
+    const energyCtx = document.getElementById('energy-visualization-chart');
+    
+    if (energyCtx) {
+        // Generate demo data
+        const generateEnergyData = () => {
+            const data = [];
+            const timestamps = [];
+            const anomalies = [];
+            
+            // Current date
+            const date = new Date();
+            date.setHours(0, 0, 0, 0);
+            
+            // Generate data for 24 hours
+            for (let i = 0; i < 24; i++) {
+                // Move date forward by 1 hour
+                date.setHours(date.getHours() + 1);
+                
+                // Base value with time-of-day pattern
+                let value = 50;
+                
+                // Morning peak (7-9am)
+                if (i >= 7 && i <= 9) {
+                    value += 30 + (Math.random() * 10);
+                }
+                // Evening peak (6-8pm)
+                else if (i >= 18 && i <= 20) {
+                    value += 35 + (Math.random() * 15);
+                }
+                // Night low (11pm-5am)
+                else if (i >= 23 || i <= 5) {
+                    value += 5 + (Math.random() * 10);
+                }
+                // Regular daytime
+                else {
+                    value += 15 + (Math.random() * 10);
+                }
+                
+                // Add some random noise
+                value += (Math.random() * 5 - 2.5);
+                
+                // Add occasional anomalies
+                let isAnomaly = false;
+                if (i === 10 || i === 19) {
+                    value += 25;
+                    isAnomaly = true;
+                }
+                
+                data.push(value);
+                timestamps.push(date.toISOString());
+                anomalies.push(isAnomaly ? value : null);
+            }
+            
+            return { data, timestamps, anomalies };
+        };
+        
+        const { data, timestamps, anomalies } = generateEnergyData();
+        
+        // Create energy visualization chart
+        const energyChart = new Chart(energyCtx, {
+            type: 'line',
+            data: {
+                labels: timestamps,
+                datasets: [
+                    {
+                        label: 'Energy Consumption',
+                        data: data,
+                        borderColor: 'rgba(26, 188, 156, 1)',
+                        backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Anomalies',
+                        data: anomalies,
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        showLine: false
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                return new Date(tooltipItems[0].label).toLocaleTimeString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            displayFormats: {
+                                hour: 'HH:mm'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Energy Consumption (kWh)',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Store the chart instance
+        chartInstances['energy-visualization-chart'] = energyChart;
+    }
+    
+    // Initialize model performance chart
+    const performanceCtx = document.getElementById('model-performance-home-chart');
+    
+    if (performanceCtx) {
+        // Sample data for model performance
+        const modelData = {
+            labels: ['Isolation Forest', 'AutoEncoder', 'K-Means'],
+            datasets: [
+                {
+                    label: 'Precision',
+                    data: [0.87, 0.92, 0.81],
+                    backgroundColor: 'rgba(46, 204, 113, 0.7)'
+                },
+                {
+                    label: 'Recall',
+                    data: [0.78, 0.85, 0.72],
+                    backgroundColor: 'rgba(52, 152, 219, 0.7)'
+                },
+                {
+                    label: 'F1 Score',
+                    data: [0.82, 0.88, 0.76],
+                    backgroundColor: 'rgba(155, 89, 182, 0.7)'
+                }
+            ]
+        };
+        
+        // Create model performance chart
+        const performanceChart = new Chart(performanceCtx, {
+            type: 'bar',
+            data: modelData,
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Model Performance Comparison',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(1);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Store the chart instance
+        chartInstances['model-performance-home-chart'] = performanceChart;
+    }
+    
+    // Initialize anomaly distribution chart
+    const distributionCtx = document.getElementById('anomaly-distribution-chart');
+    
+    if (distributionCtx) {
+        // Sample data for anomaly distribution
+        const distributionData = {
+            labels: ['Morning (6-12)', 'Afternoon (12-18)', 'Evening (18-24)', 'Night (0-6)'],
+            datasets: [{
+                data: [25, 15, 40, 20],
+                backgroundColor: [
+                    'rgba(241, 196, 15, 0.7)',
+                    'rgba(46, 204, 113, 0.7)',
+                    'rgba(231, 76, 60, 0.7)',
+                    'rgba(52, 152, 219, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(241, 196, 15, 1)',
+                    'rgba(46, 204, 113, 1)',
+                    'rgba(231, 76, 60, 1)',
+                    'rgba(52, 152, 219, 1)'
+                ],
+                borderWidth: 2
+            }]
+        };
+        
+        // Create anomaly distribution chart
+        const distributionChart = new Chart(distributionCtx, {
+            type: 'pie',
+            data: distributionData,
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Anomaly Distribution by Time of Day',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${context.label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Store the chart instance
+        chartInstances['anomaly-distribution-chart'] = distributionChart;
+    }
+    
+    // Set up refresh button
+    const refreshBtn = document.getElementById('refresh-home');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-sync fa-spin"></i> Refreshing...';
+            
+            // Simulate refresh
+            setTimeout(() => {
+                if (chartInstances['energy-visualization-chart']) {
+                    const { data, timestamps, anomalies } = generateEnergyData();
+                    
+                    chartInstances['energy-visualization-chart'].data.labels = timestamps;
+                    chartInstances['energy-visualization-chart'].data.datasets[0].data = data;
+                    chartInstances['energy-visualization-chart'].data.datasets[1].data = anomalies;
+                    chartInstances['energy-visualization-chart'].update();
+                }
+                
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+                
+                // Show toast notification
+                const toastEl = document.createElement('div');
+                toastEl.className = 'toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-3';
+                toastEl.setAttribute('role', 'alert');
+                toastEl.setAttribute('aria-live', 'assertive');
+                toastEl.setAttribute('aria-atomic', 'true');
+                toastEl.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-check-circle me-2"></i> Data refreshed successfully!
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toastEl);
+                const toast = new bootstrap.Toast(toastEl, {
+                    autohide: true,
+                    delay: 3000
+                });
+                toast.show();
+                
+                toastEl.addEventListener('hidden.bs.toast', function() {
+                    toastEl.remove();
+                });
+            }, 1000);
+        });
+    }
+});
+</script>
+{% endblock %}

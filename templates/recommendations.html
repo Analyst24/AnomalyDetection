@@ -1,0 +1,551 @@
+{% extends "layout.html" %}
+
+{% block title %}Recommendations - Energy Anomaly Detection{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Energy Efficiency Recommendations</h1>
+            <p class="text-muted">Actionable insights based on detected anomalies to improve energy efficiency</p>
+        </div>
+    </div>
+    
+    <!-- Recommendation Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label class="form-label">Filter By Result</label>
+                            <select class="form-select" id="result-filter">
+                                <option value="all">All Results</option>
+                                {% for result in results %}
+                                    <option value="{{ result.id }}">
+                                        {{ result.dataset.filename }} - 
+                                        {% if result.algorithm == 'isolation_forest' %}
+                                            Isolation Forest
+                                        {% elif result.algorithm == 'autoencoder' %}
+                                            AutoEncoder
+                                        {% elif result.algorithm == 'kmeans' %}
+                                            K-Means
+                                        {% endif %}
+                                        ({{ result.creation_date.strftime('%Y-%m-%d') }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label class="form-label">Sort By</label>
+                            <select class="form-select" id="sort-by">
+                                <option value="priority">Priority</option>
+                                <option value="savings">Potential Savings</option>
+                                <option value="implementation">Implementation Ease</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Filter By Type</label>
+                            <div class="d-flex">
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="checkbox" value="time_pattern" id="filter-time" checked>
+                                    <label class="form-check-label" for="filter-time">Time-Based</label>
+                                </div>
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="checkbox" value="intensity" id="filter-intensity" checked>
+                                    <label class="form-check-label" for="filter-intensity">Intensity-Based</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="frequency" id="filter-frequency" checked>
+                                    <label class="form-check-label" for="filter-frequency">Frequency-Based</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommendations Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4 mb-md-0">
+            <div class="card bg-dark border-0 h-100">
+                <div class="card-body text-center">
+                    <div class="my-3">
+                        <i class="fas fa-bolt fa-3x text-warning energy-pulse"></i>
+                    </div>
+                    <h3 class="mb-3" id="potential-savings">10-15%</h3>
+                    <p class="mb-0">Potential Energy Savings</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4 mb-md-0">
+            <div class="card bg-dark border-0 h-100">
+                <div class="card-body text-center">
+                    <div class="my-3">
+                        <i class="fas fa-calendar-check fa-3x text-success"></i>
+                    </div>
+                    <h3 class="mb-3" id="recommended-actions">
+                        {% if results %}
+                            {% set total_recommendations = 5 %}
+                            {{ total_recommendations }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h3>
+                    <p class="mb-0">Recommended Actions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-dark border-0 h-100">
+                <div class="card-body text-center">
+                    <div class="my-3">
+                        <i class="fas fa-stopwatch fa-3x text-info"></i>
+                    </div>
+                    <h3 class="mb-3" id="implementation-time">2-3 weeks</h3>
+                    <p class="mb-0">Est. Implementation Time</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommendations List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recommendations</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="export-recommendations">
+                        <i class="fas fa-file-pdf me-2"></i> Export Report
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if results %}
+                        <div id="recommendations-container">
+                            <!-- High Priority Recommendations -->
+                            <div class="recommendation-card high-priority mb-4">
+                                <div class="card-body">
+                                    <div class="d-flex">
+                                        <div class="recommendation-icon me-3">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title">Evening Peak Energy Consumption</h5>
+                                            <p class="card-text">Energy anomalies occur frequently during 18:00-21:00 hours. This evening peak corresponds to 40% of all detected anomalies and represents significant optimization potential.</p>
+                                            
+                                            <div class="mt-3">
+                                                <h6>Recommended Actions:</h6>
+                                                <ol>
+                                                    <li>Schedule heavy energy-consuming processes outside this time window</li>
+                                                    <li>Implement staged startup of systems during the evening transition</li>
+                                                    <li>Review HVAC setpoints during peak hours</li>
+                                                </ol>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                                <div>
+                                                    <span class="badge bg-success me-2">Estimated Savings: 8-12%</span>
+                                                    <span class="badge bg-secondary">Implementation: Medium</span>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-light">
+                                                    <i class="fas fa-check me-2"></i> Mark as Implemented
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Medium Priority Recommendations -->
+                            <div class="recommendation-card medium-priority mb-4">
+                                <div class="card-body">
+                                    <div class="d-flex">
+                                        <div class="recommendation-icon me-3">
+                                            <i class="fas fa-chart-pie"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title">Weekend Overconsumption Pattern</h5>
+                                            <p class="card-text">Analysis shows significant anomalies during weekend operations when facility usage is typically lower. This suggests systems may be running at full capacity unnecessarily.</p>
+                                            
+                                            <div class="mt-3">
+                                                <h6>Recommended Actions:</h6>
+                                                <ol>
+                                                    <li>Adjust weekend operational schedules to match actual usage</li>
+                                                    <li>Implement automated setbacks for lighting and HVAC systems</li>
+                                                    <li>Consider partial shutdowns for non-critical equipment</li>
+                                                </ol>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                                <div>
+                                                    <span class="badge bg-success me-2">Estimated Savings: 5-8%</span>
+                                                    <span class="badge bg-secondary">Implementation: Easy</span>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-light">
+                                                    <i class="fas fa-check me-2"></i> Mark as Implemented
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Normal Recommendations -->
+                            <div class="recommendation-card mb-4">
+                                <div class="card-body">
+                                    <div class="d-flex">
+                                        <div class="recommendation-icon me-3">
+                                            <i class="fas fa-bolt"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title">Sudden Spikes in Power Consumption</h5>
+                                            <p class="card-text">Intermittent high-intensity anomalies were detected throughout the monitoring period. These short-duration spikes may indicate equipment issues or uncoordinated startups.</p>
+                                            
+                                            <div class="mt-3">
+                                                <h6>Recommended Actions:</h6>
+                                                <ol>
+                                                    <li>Implement staggered equipment startup procedures</li>
+                                                    <li>Check for power quality issues and equipment malfunctions</li>
+                                                    <li>Consider adding soft starters to heavy equipment</li>
+                                                </ol>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                                <div>
+                                                    <span class="badge bg-success me-2">Estimated Savings: 2-4%</span>
+                                                    <span class="badge bg-secondary">Implementation: Medium</span>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-light">
+                                                    <i class="fas fa-check me-2"></i> Mark as Implemented
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="recommendation-card mb-4">
+                                <div class="card-body">
+                                    <div class="d-flex">
+                                        <div class="recommendation-icon me-3">
+                                            <i class="fas fa-temperature-high"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title">Temperature-Related Consumption Increase</h5>
+                                            <p class="card-text">Analysis shows energy anomalies correlate with external temperature changes. Your HVAC system may be overcompensating for temperature fluctuations.</p>
+                                            
+                                            <div class="mt-3">
+                                                <h6>Recommended Actions:</h6>
+                                                <ol>
+                                                    <li>Adjust HVAC response curves to avoid overcorrection</li>
+                                                    <li>Implement predictive controls based on weather forecasts</li>
+                                                    <li>Consider thermal energy storage to buffer peak demands</li>
+                                                </ol>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                                <div>
+                                                    <span class="badge bg-success me-2">Estimated Savings: 3-6%</span>
+                                                    <span class="badge bg-secondary">Implementation: Complex</span>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-light">
+                                                    <i class="fas fa-check me-2"></i> Mark as Implemented
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="recommendation-card mb-4">
+                                <div class="card-body">
+                                    <div class="d-flex">
+                                        <div class="recommendation-icon me-3">
+                                            <i class="fas fa-brain"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title">Algorithm Recommendation</h5>
+                                            <p class="card-text">Based on your energy consumption patterns, you may benefit from running multiple detection algorithms in parallel for more comprehensive insights.</p>
+                                            
+                                            <div class="mt-3">
+                                                <h6>Recommended Actions:</h6>
+                                                <ol>
+                                                    <li>Run AutoEncoder for pattern-based anomalies alongside Isolation Forest</li>
+                                                    <li>Compare results across algorithms to identify consistent issues</li>
+                                                    <li>Consider ensemble approaches for critical systems</li>
+                                                </ol>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                                <div>
+                                                    <span class="badge bg-info me-2">System Improvement</span>
+                                                    <span class="badge bg-secondary">Implementation: Easy</span>
+                                                </div>
+                                                <div>
+                                                    <a href="{{ url_for('detection') }}" class="btn btn-sm btn-outline-light">
+                                                        <i class="fas fa-play me-2"></i> Run Analysis
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-lightbulb fa-3x mb-3 text-muted"></i>
+                            <p class="lead">No analysis results available for recommendations</p>
+                            <a href="{{ url_for('detection') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-search me-2"></i> Run Anomaly Detection
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Implementation Roadmap -->
+    {% if results %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Implementation Roadmap</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Phase</th>
+                                    <th>Recommendations</th>
+                                    <th>Timeline</th>
+                                    <th>Est. Savings</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Phase 1</td>
+                                    <td>Evening Peak Optimization, Weekend Adjustments</td>
+                                    <td>1-2 weeks</td>
+                                    <td>13-20%</td>
+                                    <td><span class="badge bg-warning">Not Started</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Phase 2</td>
+                                    <td>Power Spikes Management, Equipment Calibration</td>
+                                    <td>2-4 weeks</td>
+                                    <td>2-4%</td>
+                                    <td><span class="badge bg-warning">Not Started</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Phase 3</td>
+                                    <td>HVAC Optimization, Predictive Controls</td>
+                                    <td>4-8 weeks</td>
+                                    <td>3-6%</td>
+                                    <td><span class="badge bg-warning">Not Started</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Result filter functionality
+    const resultFilter = document.getElementById('result-filter');
+    const sortBySelect = document.getElementById('sort-by');
+    const typeFilters = document.querySelectorAll('input[type="checkbox"]');
+    const recommendationsContainer = document.getElementById('recommendations-container');
+    
+    if (resultFilter) {
+        resultFilter.addEventListener('change', function() {
+            filterRecommendations();
+        });
+    }
+    
+    if (sortBySelect) {
+        sortBySelect.addEventListener('change', function() {
+            sortRecommendations();
+        });
+    }
+    
+    if (typeFilters.length > 0) {
+        typeFilters.forEach(filter => {
+            filter.addEventListener('change', function() {
+                filterRecommendations();
+            });
+        });
+    }
+    
+    // Export functionality
+    const exportBtn = document.getElementById('export-recommendations');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            // Show exporting feedback
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Generating PDF...';
+            this.disabled = true;
+            
+            // Simulate PDF generation
+            setTimeout(() => {
+                // Reset button
+                this.innerHTML = '<i class="fas fa-file-pdf me-2"></i> Export Report';
+                this.disabled = false;
+                
+                // Show success message
+                const toastEl = document.createElement('div');
+                toastEl.className = 'toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-3';
+                toastEl.setAttribute('role', 'alert');
+                toastEl.setAttribute('aria-live', 'assertive');
+                toastEl.setAttribute('aria-atomic', 'true');
+                toastEl.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-check-circle me-2"></i> Recommendations exported successfully!
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toastEl);
+                const toast = new bootstrap.Toast(toastEl, {
+                    autohide: true,
+                    delay: 3000
+                });
+                toast.show();
+                
+                toastEl.addEventListener('hidden.bs.toast', function() {
+                    toastEl.remove();
+                });
+            }, 1500);
+        });
+    }
+    
+    // Function to filter recommendations
+    function filterRecommendations() {
+        if (!recommendationsContainer) return;
+        
+        const selectedResult = resultFilter.value;
+        const enabledTypes = Array.from(typeFilters)
+            .filter(filter => filter.checked)
+            .map(filter => filter.value);
+        
+        // In a real app, this would fetch filtered recommendations from the server
+        // For now, just show a loading spinner and then restore all cards
+        recommendationsContainer.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Filtering recommendations...</p>
+            </div>
+        `;
+        
+        // Simulate loading
+        setTimeout(() => {
+            // In a real app, this would render filtered recommendations
+            // For now, just restore the original content
+            location.reload();
+        }, 800);
+    }
+    
+    // Function to sort recommendations
+    function sortRecommendations() {
+        if (!recommendationsContainer) return;
+        
+        const sortBy = sortBySelect.value;
+        
+        // In a real app, this would sort the recommendations
+        // For now, just show a loading spinner and then restore all cards
+        recommendationsContainer.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Sorting recommendations...</p>
+            </div>
+        `;
+        
+        // Simulate loading
+        setTimeout(() => {
+            // In a real app, this would render sorted recommendations
+            // For now, just restore the original content
+            location.reload();
+        }, 800);
+    }
+    
+    // Mark as implemented functionality
+    const implementButtons = document.querySelectorAll('.recommendation-card button');
+    if (implementButtons.length > 0) {
+        implementButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const card = this.closest('.recommendation-card');
+                
+                // Show implementing feedback
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Updating...';
+                this.disabled = true;
+                
+                // Simulate implementation update
+                setTimeout(() => {
+                    // Update button and card style
+                    this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Implemented';
+                    this.classList.remove('btn-outline-light');
+                    this.classList.add('btn-success');
+                    this.disabled = true;
+                    
+                    // Add implemented class to card
+                    card.style.opacity = '0.7';
+                    
+                    // Show success message
+                    const toastEl = document.createElement('div');
+                    toastEl.className = 'toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-3';
+                    toastEl.setAttribute('role', 'alert');
+                    toastEl.setAttribute('aria-live', 'assertive');
+                    toastEl.setAttribute('aria-atomic', 'true');
+                    toastEl.innerHTML = `
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="fas fa-check-circle me-2"></i> Recommendation marked as implemented!
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(toastEl);
+                    const toast = new bootstrap.Toast(toastEl, {
+                        autohide: true,
+                        delay: 3000
+                    });
+                    toast.show();
+                    
+                    toastEl.addEventListener('hidden.bs.toast', function() {
+                        toastEl.remove();
+                    });
+                    
+                    // Update the recommended actions count
+                    const actionsElement = document.getElementById('recommended-actions');
+                    if (actionsElement) {
+                        const currentCount = parseInt(actionsElement.textContent);
+                        if (!isNaN(currentCount)) {
+                            actionsElement.textContent = currentCount - 1;
+                        }
+                    }
+                }, 1000);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

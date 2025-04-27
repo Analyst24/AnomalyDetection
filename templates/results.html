@@ -1,0 +1,329 @@
+{% extends "layout.html" %}
+
+{% block title %}Results - Energy Anomaly Detection{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="mb-0"><i class="fas fa-chart-line me-2"></i> Analysis Results</h1>
+                <div>
+                    <a href="{{ url_for('detection') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i> New Analysis
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted">View detailed anomaly detection results and insights</p>
+        </div>
+    </div>
+    
+    {% if selected_id %}
+        <!-- Detailed Result View -->
+        {% set current_result = results[0] if results else None %}
+        {% if current_result %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            {% if current_result.algorithm == 'isolation_forest' %}
+                                <i class="fas fa-tree me-2"></i> Isolation Forest
+                            {% elif current_result.algorithm == 'autoencoder' %}
+                                <i class="fas fa-brain me-2"></i> AutoEncoder
+                            {% elif current_result.algorithm == 'kmeans' %}
+                                <i class="fas fa-object-group me-2"></i> K-Means Clustering
+                            {% endif %}
+                            Analysis
+                        </h5>
+                        <span class="badge bg-primary">{{ current_result.creation_date.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Dataset Information</h6>
+                                        <div class="table-responsive">
+                                            <table class="table">
+                                                <tbody>
+                                                    <tr>
+                                                        <th>Filename:</th>
+                                                        <td>{{ current_result.dataset.filename }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Data Points:</th>
+                                                        <td>{{ current_result.dataset.row_count }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Upload Date:</th>
+                                                        <td>{{ current_result.dataset.upload_date.strftime('%Y-%m-%d') }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Detection Summary</h6>
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="me-3">
+                                                <span class="badge badge-anomaly fs-4 py-2 px-3">{{ current_result.anomaly_count }}</span>
+                                            </div>
+                                            <div>Anomalies Detected</div>
+                                        </div>
+                                        <div class="progress mb-3" style="height: 8px;">
+                                            {% if current_result.metrics and current_result.metrics.total_points %}
+                                                {% set anomaly_percent = (current_result.anomaly_count / current_result.metrics.total_points) * 100 %}
+                                            {% else %}
+                                                {% set anomaly_percent = 0 %}
+                                            {% endif %}
+                                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ anomaly_percent }}%"></div>
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ "%.2f"|format(anomaly_percent) }}% of data points identified as anomalies
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Model Performance</h6>
+                                        {% if current_result.metrics %}
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <div>Precision:</div>
+                                                <div>{{ "%.2f"|format(current_result.metrics.precision) }}</div>
+                                            </div>
+                                            <div class="progress mb-3" style="height: 5px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ current_result.metrics.precision * 100 }}%"></div>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <div>Recall:</div>
+                                                <div>{{ "%.2f"|format(current_result.metrics.recall) }}</div>
+                                            </div>
+                                            <div class="progress mb-3" style="height: 5px;">
+                                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ current_result.metrics.recall * 100 }}%"></div>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <div>F1 Score:</div>
+                                                <div>{{ "%.2f"|format(current_result.metrics.f1_score) }}</div>
+                                            </div>
+                                            <div class="progress mb-3" style="height: 5px;">
+                                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ current_result.metrics.f1_score * 100 }}%"></div>
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i> Metrics not available for this result
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Visualization Section -->
+                        <div class="row">
+                            <div class="col-12 mb-4">
+                                <h5 class="mb-3">Time Series with Anomalies</h5>
+                                <div class="chart-container full-height-chart">
+                                    <canvas id="time-series-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <h5 class="mb-3">Metrics</h5>
+                                <div class="chart-container">
+                                    <canvas id="metrics-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <h5 class="mb-3">Anomaly Summary</h5>
+                                <div class="chart-container">
+                                    <canvas id="anomaly-summary-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <h5 class="mb-3">Anomaly Distribution</h5>
+                                <div class="chart-container">
+                                    <canvas id="anomalies-distribution-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Download & Share Options -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card bg-dark">
+                                    <div class="card-body">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center">
+                                            <div class="mb-3 mb-md-0">
+                                                <h6 class="mb-2">Export Results</h6>
+                                                <div class="btn-group">
+                                                    <a href="#" class="btn btn-outline-light btn-sm">
+                                                        <i class="fas fa-file-csv me-2"></i> CSV
+                                                    </a>
+                                                    <a href="#" class="btn btn-outline-light btn-sm">
+                                                        <i class="fas fa-file-pdf me-2"></i> PDF Report
+                                                    </a>
+                                                    <a href="#" class="btn btn-outline-light btn-sm">
+                                                        <i class="fas fa-file-image me-2"></i> Charts
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <h6 class="mb-2">Quick Actions</h6>
+                                                <div class="btn-group">
+                                                    <a href="{{ url_for('recommendations') }}" class="btn btn-outline-light btn-sm">
+                                                        <i class="fas fa-lightbulb me-2"></i> Get Recommendations
+                                                    </a>
+                                                    <a href="{{ url_for('detection') }}?dataset={{ current_result.dataset_id }}" class="btn btn-outline-light btn-sm">
+                                                        <i class="fas fa-redo me-2"></i> Re-analyze
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i> Result not found
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- Results List View -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">All Analysis Results</h5>
+                        <div class="input-group" style="width: 300px;">
+                            <input type="text" class="form-control" placeholder="Search results..." id="results-search">
+                            <button class="btn btn-outline-secondary" type="button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if results %}
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Algorithm</th>
+                                            <th>Dataset</th>
+                                            <th>Anomalies</th>
+                                            <th>Precision</th>
+                                            <th>Recall</th>
+                                            <th>F1 Score</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for result in results %}
+                                            <tr>
+                                                <td>
+                                                    {% if result.algorithm == 'isolation_forest' %}
+                                                        <span class="badge bg-primary">Isolation Forest</span>
+                                                    {% elif result.algorithm == 'autoencoder' %}
+                                                        <span class="badge bg-success">AutoEncoder</span>
+                                                    {% elif result.algorithm == 'kmeans' %}
+                                                        <span class="badge bg-info">K-Means</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ result.dataset.filename }}</td>
+                                                <td><span class="badge badge-anomaly">{{ result.anomaly_count }}</span></td>
+                                                <td>
+                                                    {% if result.metrics and result.metrics.precision is defined %}
+                                                        {{ "%.2f"|format(result.metrics.precision) }}
+                                                    {% else %}
+                                                        N/A
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if result.metrics and result.metrics.recall is defined %}
+                                                        {{ "%.2f"|format(result.metrics.recall) }}
+                                                    {% else %}
+                                                        N/A
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if result.metrics and result.metrics.f1_score is defined %}
+                                                        {{ "%.2f"|format(result.metrics.f1_score) }}
+                                                    {% else %}
+                                                        N/A
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ result.creation_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <a href="{{ url_for('results', result_id=result.id) }}" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <a href="{{ url_for('recommendations') }}?result_id={{ result.id }}" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fas fa-lightbulb"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-chart-line fa-3x mb-3 text-muted"></i>
+                                <p class="lead">No analysis results yet</p>
+                                <a href="{{ url_for('detection') }}" class="btn btn-primary mt-2">
+                                    <i class="fas fa-search me-2"></i> Run Your First Detection
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Hidden input for selected result ID -->
+<input type="hidden" id="selected-result-id" value="{{ selected_id }}">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize results search functionality
+    const searchInput = document.getElementById('results-search');
+    const resultsTable = document.getElementById('results-table');
+    
+    if (searchInput && resultsTable) {
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = resultsTable.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const display = text.includes(searchTerm) ? '' : 'none';
+                row.style.display = display;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
