@@ -477,13 +477,14 @@ def init_routes(app):
         
         # Get feature importance from metrics if available
         feature_importance = {}
-        if 'feature_importance' in result.metrics:
-            feature_importance = result.metrics['feature_importance']
-        
-        # Add anomaly details if available
-        anomaly_details = {}
-        if 'anomaly_details' in result.metrics:
-            anomaly_details = result.metrics['anomaly_details']
+        if result.metrics and isinstance(result.metrics, dict):
+            if 'feature_importance' in result.metrics:
+                feature_importance = result.metrics['feature_importance']
+            
+            # Add anomaly details if available
+            anomaly_details = {}
+            if 'anomaly_details' in result.metrics:
+                anomaly_details = result.metrics['anomaly_details']
             
         return jsonify({
             'time_series': time_series_data,
