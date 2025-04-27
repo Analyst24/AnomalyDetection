@@ -10,6 +10,9 @@
 
 {% block full_content %}
 <div class="login-page">
+    <!-- Particles.js container for background animation -->
+    <div id="particles-js" class="particles-container"></div>
+    
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
@@ -150,6 +153,7 @@
     </div>
 </div>
 
-<!-- Auth related JavaScript -->
+<!-- Particles.js and Auth related JavaScript -->
+<script src="{{ url_for('static', filename='js/particles.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 {% endblock %}
