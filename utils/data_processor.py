@@ -24,47 +24,125 @@ def preprocess_data(df, time_column, value_column):
     # Make a copy to avoid modifying the original
     processed_df = df.copy()
     
+    # Replace infinity values with NaN first
+    processed_df = processed_df.replace([np.inf, -np.inf], np.nan)
+    
+    # Ensure the specified columns exist
+    if time_column not in processed_df.columns:
+        # Try to auto-detect a time column
+        possible_time_cols = [col for col in processed_df.columns if 
+                              any(time_str in col.lower() for time_str in 
+                                  ['time', 'date', 'timestamp', 'period'])]
+        if possible_time_cols:
+            time_column = possible_time_cols[0]
+            print(f"Auto-detected time column: {time_column}")
+        else:
+            raise ValueError(f"Time column '{time_column}' not found and could not auto-detect any time column")
+    
+    if value_column not in processed_df.columns:
+        # Try to auto-detect a numeric value column
+        numeric_cols = processed_df.select_dtypes(include=['number']).columns.tolist()
+        # Exclude columns that are likely to be categorical or IDs
+        exclude_patterns = ['id', 'code', 'category', 'type', 'class', 'year']
+        value_candidates = [col for col in numeric_cols if not any(pattern in col.lower() for pattern in exclude_patterns)]
+        
+        if value_candidates:
+            value_column = value_candidates[0]
+            print(f"Auto-detected value column: {value_column}")
+        else:
+            raise ValueError(f"Value column '{value_column}' not found and could not auto-detect any suitable value column")
+    
     # Convert time column to datetime if it's not already
-    if not pd.api.types.is_datetime64_any_dtype(processed_df[time_column]):
-        processed_df[time_column] = pd.to_datetime(processed_df[time_column], errors='coerce')
+    try:
+        if not pd.api.types.is_datetime64_any_dtype(processed_df[time_column]):
+            processed_df[time_column] = pd.to_datetime(processed_df[time_column], errors='coerce')
+    except Exception as e:
+        print(f"Error converting time column to datetime: {str(e)}. Using original column.")
     
     # Drop rows with invalid timestamps
     processed_df = processed_df.dropna(subset=[time_column])
     
     # Handle missing values in the value column
     if processed_df[value_column].isna().any():
-        # Fill missing values with interpolation
-        processed_df[value_column] = processed_df[value_column].interpolate(method='linear')
+        try:
+            # Fill missing values with interpolation
+            processed_df[value_column] = processed_df[value_column].interpolate(method='linear')
+            # If any NaN values remain (at the edges), use forward and backward fill
+            processed_df[value_column] = processed_df[value_column].fillna(method='ffill').fillna(method='bfill')
+            # If there are still NaNs (possible if all values are NaN), fill with zeros
+            processed_df[value_column] = processed_df[value_column].fillna(0)
+        except Exception as e:
+            print(f"Error handling missing values: {str(e)}. Using simple fill.")
+            processed_df[value_column] = processed_df[value_column].fillna(processed_df[value_column].median() 
+                                                                 if not processed_df[value_column].isna().all() else 0)
     
     # Sort by timestamp
-    processed_df = processed_df.sort_values(by=time_column)
+    try:
+        processed_df = processed_df.sort_values(by=time_column)
+    except Exception as e:
+        print(f"Error sorting by time column: {str(e)}. Continuing without sorting.")
     
     # Remove duplicates
-    processed_df = processed_df.drop_duplicates(subset=[time_column])
+    try:
+        processed_df = processed_df.drop_duplicates(subset=[time_column])
+    except Exception as e:
+        print(f"Error removing duplicates: {str(e)}. Continuing with possible duplicates.")
     
-    # Handle outliers - cap values at 3 standard deviations from the mean
-    mean = processed_df[value_column].mean()
-    std = processed_df[value_column].std()
-    lower_bound = mean - 3 * std
-    upper_bound = mean + 3 * std
+    # Handle outliers robustly - cap values at 5 standard deviations from the mean
+    try:
+        # Get value column as numeric, forcing conversion if needed
+        numeric_values = pd.to_numeric(processed_df[value_column], errors='coerce')
+        numeric_values = numeric_values.fillna(numeric_values.median() if not numeric_values.isna().all() else 0)
+        
+        # Calculate robust statistics
+        mean = numeric_values.mean()
+        std = numeric_values.std()
+        
+        if not np.isnan(mean) and not np.isnan(std) and std > 0:
+            lower_bound = mean - 5 * std
+            upper_bound = mean + 5 * std
+            
+            # Cap extreme values (store original values for reference)
+            processed_df['original_value'] = processed_df[value_column]
+            processed_df[value_column] = np.clip(numeric_values, lower_bound, upper_bound)
+        else:
+            # If we can't calculate meaningful bounds, just store original values
+            processed_df['original_value'] = processed_df[value_column]
+            # Ensure the value column is numeric
+            processed_df[value_column] = numeric_values
+    except Exception as e:
+        print(f"Error handling outliers: {str(e)}. Continuing with original values.")
+        processed_df['original_value'] = processed_df[value_column]
     
-    # Cap extreme values (store original values for reference)
-    processed_df['original_value'] = processed_df[value_column]
-    processed_df[value_column] = np.clip(processed_df[value_column], lower_bound, upper_bound)
+    # Extract time-based features with error handling
+    try:
+        processed_df['hour'] = processed_df[time_column].dt.hour
+        processed_df['day_of_week'] = processed_df[time_column].dt.dayofweek
+        processed_df['month'] = processed_df[time_column].dt.month
+        processed_df['is_weekend'] = (processed_df['day_of_week'] >= 5).astype(int)
+    except Exception as e:
+        print(f"Error extracting time features: {str(e)}. Skipping time feature extraction.")
     
-    # Extract time-based features
-    processed_df['hour'] = processed_df[time_column].dt.hour
-    processed_df['day_of_week'] = processed_df[time_column].dt.dayofweek
-    processed_df['month'] = processed_df[time_column].dt.month
-    processed_df['is_weekend'] = (processed_df['day_of_week'] >= 5).astype(int)
+    # Add lagged features with error handling
+    try:
+        for lag in [1, 6, 12, 24]:
+            processed_df[f'lag_{lag}'] = processed_df[value_column].shift(lag).fillna(0)
+    except Exception as e:
+        print(f"Error creating lag features: {str(e)}. Skipping lag features.")
     
-    # Add lagged features
-    for lag in [1, 6, 12, 24]:
-        processed_df[f'lag_{lag}'] = processed_df[value_column].shift(lag).fillna(0)
-    
-    # Add rolling statistics
-    processed_df['rolling_mean_24h'] = processed_df[value_column].rolling(window=24, min_periods=1).mean()
-    processed_df['rolling_std_24h'] = processed_df[value_column].rolling(window=24, min_periods=1).std().fillna(0)
+    # Add rolling statistics with error handling
+    try:
+        processed_df['rolling_mean_24h'] = processed_df[value_column].rolling(window=24, min_periods=1).mean().fillna(0)
+        processed_df['rolling_std_24h'] = processed_df[value_column].rolling(window=24, min_periods=1).std().fillna(0)
+    except Exception as e:
+        print(f"Error calculating rolling statistics: {str(e)}. Skipping rolling statistics.")
+        
+    # Final check for any remaining infinities or NaNs across the entire dataframe
+    processed_df = processed_df.replace([np.inf, -np.inf], np.nan)
+    numeric_cols = processed_df.select_dtypes(include=['number']).columns
+    for col in numeric_cols:
+        if processed_df[col].isna().any():
+            processed_df[col] = processed_df[col].fillna(0)
     
     return processed_df
 

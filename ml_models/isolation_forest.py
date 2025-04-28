@@ -51,11 +51,14 @@ class IsolationForestModel:
         # Make a copy to avoid modifying the original
         df_copy = df.copy()
         
+        # Replace infinity values and NaNs
+        df_copy = df_copy.replace([np.inf, -np.inf], np.nan)
+        
         # Auto-detect feature columns if not specified
         if feature_columns is None:
             # Exclude typical timestamp or ID columns
             exclude_patterns = ['date', 'time', 'timestamp', 'id', 'index']
-            numeric_cols = df.select_dtypes(include=['number']).columns
+            numeric_cols = df_copy.select_dtypes(include=['number']).columns
             
             feature_columns = [col for col in numeric_cols if not any(
                 pattern in col.lower() for pattern in exclude_patterns)]
@@ -66,32 +69,59 @@ class IsolationForestModel:
             raise ValueError("No valid feature columns found in the dataset")
         
         # Create a dataframe to hold all features
-        X = pd.DataFrame(index=df.index)
+        X = pd.DataFrame(index=df_copy.index)
         
         # Process each feature column
         for col in feature_columns:
-            if col not in df.columns:
+            if col not in df_copy.columns:
                 logger.warning(f"Column {col} not found in dataframe. Skipping.")
                 continue
                 
-            # Add original feature
-            X[col] = df[col]
+            # Add original feature and handle NaN values
+            X[col] = df_copy[col].fillna(df_copy[col].median() if not df_copy[col].isna().all() else 0)
             
-            # Add rolling statistics as features
-            window_size = min(24, len(df) // 10) if len(df) > 30 else 3
+            # Clip extreme values to prevent overflow
+            col_mean = X[col].mean()
+            col_std = X[col].std()
+            if not np.isnan(col_mean) and not np.isnan(col_std) and col_std != 0:
+                # Clip to +/- 5 standard deviations
+                lower_bound = col_mean - 5 * col_std
+                upper_bound = col_mean + 5 * col_std
+                X[col] = X[col].clip(lower_bound, upper_bound)
             
-            X[f'{col}_rolling_mean'] = df[col].rolling(window=window_size, min_periods=1).mean()
-            X[f'{col}_rolling_std'] = df[col].rolling(window=window_size, min_periods=1).std().fillna(0)
-            X[f'{col}_rolling_max'] = df[col].rolling(window=window_size, min_periods=1).max()
-            X[f'{col}_rolling_min'] = df[col].rolling(window=window_size, min_periods=1).min()
-            
-            # Add additional features
-            X[f'{col}_diff'] = df[col].diff().fillna(0)
-            X[f'{col}_pct_change'] = df[col].pct_change().fillna(0)
+            # Add rolling statistics as features with error handling
+            try:
+                window_size = min(24, len(df_copy) // 10) if len(df_copy) > 30 else 3
+                
+                # Safely compute rolling statistics
+                X[f'{col}_rolling_mean'] = df_copy[col].rolling(window=window_size, min_periods=1).mean().fillna(0)
+                X[f'{col}_rolling_std'] = df_copy[col].rolling(window=window_size, min_periods=1).std().fillna(0)
+                X[f'{col}_rolling_max'] = df_copy[col].rolling(window=window_size, min_periods=1).max().fillna(0)
+                X[f'{col}_rolling_min'] = df_copy[col].rolling(window=window_size, min_periods=1).min().fillna(0)
+                
+                # Add additional features with safety checks
+                X[f'{col}_diff'] = df_copy[col].diff().fillna(0)
+                # Handle potential division by zero in pct_change
+                pct_change = df_copy[col].pct_change()
+                X[f'{col}_pct_change'] = pct_change.replace([np.inf, -np.inf], np.nan).fillna(0)
+                
+            except Exception as e:
+                logger.warning(f"Error processing column {col}: {str(e)}. Using basic features only.")
+                
+        # Check for and handle any remaining NaN or infinity values
+        X = X.fillna(0)
+        X = X.replace([np.inf, -np.inf], 0)
         
-        # Scale all features
+        # Scale all features with error handling
         feature_names = X.columns.tolist()
-        X_scaled = self.scaler.fit_transform(X)
+        try:
+            X_scaled = self.scaler.fit_transform(X)
+            # Double-check for any NaN or infinity values after scaling
+            X_scaled = np.nan_to_num(X_scaled, nan=0.0, posinf=0.0, neginf=0.0)
+        except Exception as e:
+            logger.error(f"Error during feature scaling: {str(e)}")
+            # Fall back to numpy array without scaling if scaling fails
+            X_scaled = np.nan_to_num(X.values, nan=0.0, posinf=0.0, neginf=0.0)
         
         return X_scaled, feature_names, feature_columns
     
